@@ -141,6 +141,9 @@ function ResourceCard({ title, description, href }: { title: string; description
 function UserMenu({ user, onSignOut }: { user: User; onSignOut: () => void }) {
   return (
     <div className="flex items-center gap-2">
+      <Link href="/settings" className="text-sm underline hover:no-underline">
+        Settings
+      </Link>
       <span className="text-sm">{user.email}</span>
       <button onClick={onSignOut} className="bg-red-500 text-white px-3 py-1 rounded-md text-sm hover:bg-red-600">
         Sign out

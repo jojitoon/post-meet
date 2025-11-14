@@ -9,4 +9,13 @@ export default defineSchema({
   numbers: defineTable({
     value: v.number(),
   }),
+  calendars: defineTable({
+    userId: v.string(),
+    email: v.string(),
+    accessToken: v.string(),
+    refreshToken: v.string(),
+    calendarId: v.string(),
+    calendarName: v.string(),
+    isPrimary: v.boolean(),
+  }).index('by_user', ['userId']),
 });
