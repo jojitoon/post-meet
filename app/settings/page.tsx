@@ -5,11 +5,12 @@ import { api } from '@/convex/_generated/api';
 import { useAuth } from '@workos-inc/authkit-nextjs/components';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
-import { Trash2, Plus, Calendar as CalendarIcon } from 'lucide-react';
+import { Trash2, Plus, Calendar as CalendarIcon, Bot } from 'lucide-react';
 import Link from 'next/link';
-import type { User } from '@workos-inc/node';
 
 export default function SettingsPage() {
   const { user, signOut } = useAuth();
@@ -19,6 +20,18 @@ export default function SettingsPage() {
 
   const calendars = useQuery(api.calendars.listCalendars);
   const removeCalendar = useMutation(api.calendars.removeCalendar);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const userSettings = useQuery((api as any).recall.getUserSettings);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const updateUserSettings = useMutation((api as any).recall.updateUserSettings);
+  const [botJoinMinutes, setBotJoinMinutes] = useState<number>(5);
+  const [isSavingSettings, setIsSavingSettings] = useState(false);
+
+  useEffect(() => {
+    if (userSettings) {
+      setBotJoinMinutes(userSettings.botJoinMinutesBefore || 5);
+    }
+  }, [userSettings]);
 
   useEffect(() => {
     const success = searchParams.get('success');
@@ -56,9 +69,10 @@ export default function SettingsPage() {
   const handleRemoveCalendar = async (calendarId: string) => {
     if (confirm('Are you sure you want to remove this calendar?')) {
       try {
-        await removeCalendar({ calendarId: calendarId as any });
+        // @ts-expect-error - calendarId is a string from the query result
+        await removeCalendar({ calendarId: calendarId });
         setMessage({ type: 'success', text: 'Calendar removed successfully!' });
-      } catch (error) {
+      } catch {
         setMessage({ type: 'error', text: 'Failed to remove calendar' });
       }
     }
@@ -74,7 +88,9 @@ export default function SettingsPage() {
           <div className="flex items-center gap-2">
             <span className="text-sm">{user.email}</span>
             <button
-              onClick={signOut}
+              onClick={() => {
+                void signOut();
+              }}
               className="bg-red-500 text-white px-3 py-1 rounded-md text-sm hover:bg-red-600"
             >
               Sign out
@@ -88,82 +104,124 @@ export default function SettingsPage() {
           <p className="text-muted-foreground">Manage your connected calendars</p>
         </div>
 
-      {message && (
-        <div
-          className={`mb-6 p-4 rounded-md ${
-            message.type === 'success'
-              ? 'bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200'
-              : 'bg-red-100 dark:bg-red-900 text-red-800 dark:text-red-200'
-          }`}
-        >
-          {message.text}
-        </div>
-      )}
-
-      <Card>
-        <CardHeader>
-          <div className="flex items-center justify-between">
-            <div>
-              <CardTitle>Connected Calendars</CardTitle>
-              <CardDescription>
-                Add Google calendars from different email accounts to sync events
-              </CardDescription>
-            </div>
-            <Button onClick={handleAddCalendar} className="gap-2">
-              <Plus className="h-4 w-4" />
-              Add Calendar
-            </Button>
+        {message && (
+          <div
+            className={`mb-6 p-4 rounded-md ${
+              message.type === 'success'
+                ? 'bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200'
+                : 'bg-red-100 dark:bg-red-900 text-red-800 dark:text-red-200'
+            }`}
+          >
+            {message.text}
           </div>
-        </CardHeader>
-        <CardContent>
-          {calendars === undefined ? (
-            <div className="text-center py-8 text-muted-foreground">Loading...</div>
-          ) : calendars.length === 0 ? (
-            <div className="text-center py-8">
-              <CalendarIcon className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
-              <p className="text-muted-foreground mb-4">No calendars connected yet</p>
-              <Button onClick={handleAddCalendar} variant="outline">
-                <Plus className="h-4 w-4 mr-2" />
-                Add Your First Calendar
+        )}
+
+        <Card>
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <div>
+                <CardTitle>Connected Calendars</CardTitle>
+                <CardDescription>Add Google calendars from different email accounts to sync events</CardDescription>
+              </div>
+              <Button onClick={handleAddCalendar} className="gap-2">
+                <Plus className="h-4 w-4" />
+                Add Calendar
               </Button>
             </div>
-          ) : (
-            <div className="space-y-4">
-              {calendars.map((calendar) => (
-                <div
-                  key={calendar._id}
-                  className="flex items-center justify-between p-4 border rounded-lg hover:bg-accent/50 transition-colors"
-                >
-                  <div className="flex items-center gap-3">
-                    <CalendarIcon className="h-5 w-5 text-muted-foreground" />
-                    <div>
-                      <div className="font-medium">
-                        {calendar.calendarName}
-                        {calendar.isPrimary && (
-                          <span className="ml-2 text-xs bg-primary text-primary-foreground px-2 py-0.5 rounded">
-                            Primary
-                          </span>
-                        )}
-                      </div>
-                      <div className="text-sm text-muted-foreground">{calendar.email}</div>
-                    </div>
-                  </div>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => handleRemoveCalendar(calendar._id)}
-                    className="text-destructive hover:text-destructive"
+          </CardHeader>
+          <CardContent>
+            {calendars === undefined ? (
+              <div className="text-center py-8 text-muted-foreground">Loading...</div>
+            ) : calendars.length === 0 ? (
+              <div className="text-center py-8">
+                <CalendarIcon className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
+                <p className="text-muted-foreground mb-4">No calendars connected yet</p>
+                <Button onClick={handleAddCalendar} variant="outline">
+                  <Plus className="h-4 w-4 mr-2" />
+                  Add Your First Calendar
+                </Button>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {calendars.map((calendar) => (
+                  <div
+                    key={calendar._id}
+                    className="flex items-center justify-between p-4 border rounded-lg hover:bg-accent/50 transition-colors"
                   >
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
-                </div>
-              ))}
+                    <div className="flex items-center gap-3">
+                      <CalendarIcon className="h-5 w-5 text-muted-foreground" />
+                      <div>
+                        <div className="font-medium">
+                          {calendar.calendarName}
+                          {calendar.isPrimary && (
+                            <span className="ml-2 text-xs bg-primary text-primary-foreground px-2 py-0.5 rounded">
+                              Primary
+                            </span>
+                          )}
+                        </div>
+                        <div className="text-sm text-muted-foreground">{calendar.email}</div>
+                      </div>
+                    </div>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => handleRemoveCalendar(calendar._id)}
+                      className="text-destructive hover:text-destructive"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        <Card className="mt-6">
+          <CardHeader>
+            <div className="flex items-center gap-2">
+              <Bot className="h-5 w-5" />
+              <CardTitle>Notetaker Bot Settings</CardTitle>
             </div>
-          )}
-        </CardContent>
-      </Card>
+            <CardDescription>Configure when the notetaker bot should join your meetings</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="botJoinMinutes">Join Meeting (minutes before start)</Label>
+                <Input
+                  id="botJoinMinutes"
+                  type="number"
+                  min="0"
+                  max="60"
+                  value={botJoinMinutes}
+                  onChange={(e) => setBotJoinMinutes(parseInt(e.target.value) || 0)}
+                  placeholder="5"
+                />
+                <p className="text-sm text-muted-foreground">
+                  The bot will join your meeting this many minutes before it starts. Default is 5 minutes.
+                </p>
+              </div>
+              <Button
+                onClick={async () => {
+                  setIsSavingSettings(true);
+                  try {
+                    await updateUserSettings({ botJoinMinutesBefore: botJoinMinutes });
+                    setMessage({ type: 'success', text: 'Settings saved successfully!' });
+                  } catch {
+                    setMessage({ type: 'error', text: 'Failed to save settings' });
+                  } finally {
+                    setIsSavingSettings(false);
+                  }
+                }}
+                disabled={isSavingSettings}
+              >
+                {isSavingSettings ? 'Saving...' : 'Save Settings'}
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
       </div>
     </>
   );
 }
-

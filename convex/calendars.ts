@@ -1,5 +1,6 @@
 import { v } from 'convex/values';
-import { query, mutation } from './_generated/server';
+import { query, mutation, internalMutation } from './_generated/server';
+import { internal } from './_generated/api';
 
 // Query to list all calendars for the current user
 export const listCalendars = query({
@@ -66,6 +67,11 @@ export const addCalendar = mutation({
       isPrimary: args.isPrimary,
     });
 
+    // Trigger event sync immediately after adding calendar
+    await ctx.scheduler.runAfter(0, internal.events.syncCalendarEvents, {
+      calendarId: id,
+    });
+
     return id;
   },
 });
@@ -111,6 +117,26 @@ export const getCalendarTokens = query({
     }
 
     return {
+      accessToken: calendar.accessToken,
+      refreshToken: calendar.refreshToken,
+    };
+  },
+});
+
+// Internal mutation to get calendar data (used by actions)
+export const getCalendarData = internalMutation({
+  args: {
+    calendarId: v.id('calendars'),
+  },
+  handler: async (ctx, args) => {
+    const calendar = await ctx.db.get(args.calendarId);
+    if (!calendar) {
+      return null;
+    }
+    return {
+      userId: calendar.userId,
+      calendarId: calendar.calendarId,
+      calendarName: calendar.calendarName,
       accessToken: calendar.accessToken,
       refreshToken: calendar.refreshToken,
     };

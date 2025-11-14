@@ -9,6 +9,8 @@
  */
 
 import type * as calendars from "../calendars.js";
+import type * as events from "../events.js";
+import type * as eventsQueries from "../eventsQueries.js";
 import type * as http from "../http.js";
 import type * as myFunctions from "../myFunctions.js";
 
@@ -20,6 +22,8 @@ import type {
 
 declare const fullApi: ApiFromModules<{
   calendars: typeof calendars;
+  events: typeof events;
+  eventsQueries: typeof eventsQueries;
   http: typeof http;
   myFunctions: typeof myFunctions;
 }>;
