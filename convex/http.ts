@@ -51,5 +51,65 @@ http.route({
   }),
 });
 
+// HTTP endpoint to save social media connection (called from Next.js API route)
+http.route({
+  path: '/saveSocialMediaConnection',
+  method: 'POST',
+  handler: httpAction(async (ctx, request) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) {
+      return new Response(JSON.stringify({ error: 'Unauthorized' }), {
+        status: 401,
+        headers: { 'Content-Type': 'application/json' },
+      });
+    }
+
+    const body = await request.json();
+    const {
+      platform,
+      accessToken,
+      refreshToken,
+      expiresAt,
+      profileId,
+      profileName,
+      pageId,
+      pageAccessToken,
+      pageName,
+    } = body;
+
+    if (!platform || !accessToken) {
+      return new Response(JSON.stringify({ error: 'Missing required fields' }), {
+        status: 400,
+        headers: { 'Content-Type': 'application/json' },
+      });
+    }
+
+    try {
+      const connectionId = await ctx.runMutation(api.socialMedia.saveSocialMediaConnection, {
+        platform,
+        accessToken,
+        refreshToken,
+        expiresAt,
+        profileId,
+        profileName,
+        pageId,
+        pageAccessToken,
+        pageName,
+      });
+
+      return new Response(JSON.stringify({ success: true, id: connectionId }), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' },
+      });
+    } catch (error) {
+      console.error('Error saving social media connection:', error);
+      return new Response(JSON.stringify({ error: 'Failed to save connection' }), {
+        status: 500,
+        headers: { 'Content-Type': 'application/json' },
+      });
+    }
+  }),
+});
+
 export default http;
 

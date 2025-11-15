@@ -174,7 +174,7 @@ function Content() {
               </Link>
             </div>
           ) : (
-            <div className="space-y-3">
+            <div className="space-y-4">
               {upcomingEvents.map((event) => {
                 const eventStart = new Date(event.startTime);
                 const eventEnd = event.endTime ? new Date(event.endTime) : null;
@@ -210,15 +210,11 @@ function Content() {
           ) : pastEvents.length === 0 ? (
             <div className="text-center py-8 text-muted-foreground">No past events for today</div>
           ) : (
-            <div className="space-y-3">
+            <div className="space-y-4">
               {pastEvents.map((event) => (
-                <EventCard
-                  key={event._id}
-                  event={event}
-                  onToggleNotetaker={handleToggleNotetaker}
-                  isPast
-                  onClick={() => setSelectedEvent(event)}
-                />
+                <Link key={event._id} href={`/meetings/${event._id}`} className="block">
+                  <EventCard event={event} onToggleNotetaker={handleToggleNotetaker} isPast onClick={() => {}} />
+                </Link>
               ))}
             </div>
           )}
@@ -692,13 +688,33 @@ function EventDetailsModal({
                     try {
                       const transcriptData = JSON.parse(event.meetingBaasTranscription);
                       if (Array.isArray(transcriptData)) {
-                        return transcriptData
-                          .slice(0, 3)
-                          .map((item: { text?: string; transcript?: string }, idx: number) => (
-                            <p key={idx} className="mb-1">
-                              {item.text || item.transcript || JSON.stringify(item)}
-                            </p>
-                          ));
+                        return transcriptData.slice(0, 2).map(
+                          (
+                            item: {
+                              id?: number;
+                              speaker?: string;
+                              start_time?: number;
+                              words?: Array<{ text?: string }>;
+                            },
+                            idx: number,
+                          ) => {
+                            const words = item.words || [];
+                            const spokenText = words
+                              .map((word) => word.text || '')
+                              .join(' ')
+                              .trim();
+                            const preview = spokenText.substring(0, 100) + (spokenText.length > 100 ? '...' : '');
+
+                            return (
+                              <div key={item.id || idx} className="mb-2">
+                                {item.speaker && (
+                                  <span className="font-semibold text-primary text-xs">{item.speaker}: </span>
+                                )}
+                                <span>{preview || 'No transcription available'}</span>
+                              </div>
+                            );
+                          },
+                        );
                       }
                       return (
                         transcriptData.text ||
@@ -732,22 +748,50 @@ function TranscriptionModal({
 }) {
   if (!transcription) return null;
 
+  const formatTime = (seconds: number) => {
+    const mins = Math.floor(seconds / 60);
+    const secs = Math.floor(seconds % 60);
+    return `${mins}:${secs.toString().padStart(2, '0')}`;
+  };
+
   const formatTranscription = () => {
     try {
       const transcriptData = JSON.parse(transcription);
       if (Array.isArray(transcriptData)) {
         return transcriptData.map(
-          (item: { speaker?: string; timestamp?: string; text?: string; transcript?: string }, idx: number) => (
-            <div key={idx} className="mb-4 p-3 bg-muted rounded-md">
-              {item.speaker && (
-                <div className="font-semibold text-sm mb-1 text-primary">
-                  {item.speaker}:{' '}
-                  {item.timestamp && <span className="text-muted-foreground text-xs">({item.timestamp})</span>}
+          (
+            item: {
+              id?: number;
+              speaker?: string;
+              start_time?: number;
+              words?: Array<{ text?: string; start_time?: number; end_time?: number }>;
+            },
+            idx: number,
+          ) => {
+            // Extract words and combine them into readable text
+            const words = item.words || [];
+            const spokenText = words
+              .map((word) => word.text || '')
+              .join(' ')
+              .trim();
+
+            // Format start time
+            const timeDisplay = item.start_time !== undefined ? formatTime(item.start_time) : '';
+
+            return (
+              <div key={item.id || idx} className="mb-4 p-4 bg-muted rounded-md border-l-4 border-primary">
+                <div className="flex items-center gap-2 mb-2">
+                  {item.speaker && <div className="font-semibold text-base text-primary">{item.speaker}</div>}
+                  {timeDisplay && (
+                    <span className="text-xs text-muted-foreground font-mono bg-background px-2 py-1 rounded">
+                      {timeDisplay}
+                    </span>
+                  )}
                 </div>
-              )}
-              <p className="text-sm">{item.text || item.transcript || JSON.stringify(item)}</p>
-            </div>
-          ),
+                {spokenText && <p className="text-sm leading-relaxed">{spokenText}</p>}
+              </div>
+            );
+          },
         );
       }
       return <pre className="whitespace-pre-wrap text-sm">{JSON.stringify(transcriptData, null, 2)}</pre>;

@@ -340,6 +340,26 @@ export const getEventById = internalQuery({
   },
 });
 
+// Public query to get event by ID
+export const getEventByIdPublic = query({
+  args: {
+    eventId: v.id('events'),
+  },
+  handler: async (ctx, args) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) {
+      return null;
+    }
+
+    const event = await ctx.db.get(args.eventId);
+    if (!event || event.userId !== identity.subject) {
+      return null;
+    }
+
+    return event;
+  },
+});
+
 // Internal query to get events that need bots
 export const getEventsNeedingBots = internalQuery({
   args: {
@@ -367,18 +387,13 @@ export const getEndedEventsWithMeetingBaasBots = internalQuery({
     const now = new Date(args.currentTime);
 
     // Get all events with Meeting BaaS bots
-    const allEvents = await ctx.db
-      .query('events')
-      .filter((q) =>
-        q.and(
-          q.lte('endTime', now.toISOString()),
-          q.neq('meetingBaasBotId', undefined),
-          q.eq('meetingBaasTranscription', undefined),
-        ),
-      )
-      .take(10);
+    const allEvents = await ctx.db.query('events').collect();
 
-    return allEvents;
+    return allEvents.filter((event) => {
+      const eventEnd = new Date(event.endTime);
+      // Event has ended, has Meeting BaaS bot, but no transcription yet
+      return eventEnd <= now && event.meetingBaasBotId !== undefined && event.meetingBaasTranscription === undefined;
+    });
   },
 });
 

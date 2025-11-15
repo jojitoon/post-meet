@@ -7,8 +7,6 @@ import { createBaasClient } from '@meeting-baas/sdk';
 
 const MBAAS_API_KEY = process.env.MBAAS;
 
-console.log('MBAAS_API_KEY', MBAAS_API_KEY);
-
 // Helper function to create Meeting BaaS client
 function createClient() {
   if (!MBAAS_API_KEY) {
@@ -230,6 +228,8 @@ export const pollEndedMeetingsForTranscripts = internalAction({
       currentTime: now.toISOString(),
     });
 
+    console.log('events', events?.length);
+
     for (const event of events) {
       try {
         if (!event.meetingBaasBotId) {
@@ -241,14 +241,15 @@ export const pollEndedMeetingsForTranscripts = internalAction({
         // Get meeting data with transcripts
         const meetingData = await getMeetingDataHelper(event.meetingBaasBotId);
 
-        console.log('meetingData', JSON.stringify(meetingData, null, 2));
+        // console.log('meetingData', JSON.stringify(meetingData, null, 2));
 
         // Extract transcription data (handle different possible response structures)
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const meetingDataAny = meetingData as any;
-        const transcription = meetingDataAny?.bot_data?.transcripts
-          ? JSON.stringify(meetingDataAny?.bot_data?.transcripts)
-          : null;
+        const transcription =
+          meetingDataAny?.bot_data?.transcripts?.length > 0
+            ? JSON.stringify(meetingDataAny?.bot_data?.transcripts)
+            : null;
 
         // Update event with transcription if available (save as it comes, even if meeting is still active)
         if (transcription && !event.meetingBaasTranscription) {

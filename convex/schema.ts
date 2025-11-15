@@ -47,4 +47,51 @@ export default defineSchema({
     userId: v.string(),
     botJoinMinutesBefore: v.number(), // Minutes before meeting to join
   }).index('by_user', ['userId']),
+  socialMediaConnections: defineTable({
+    userId: v.string(),
+    platform: v.string(), // 'linkedin' or 'facebook'
+    accessToken: v.string(),
+    refreshToken: v.optional(v.string()),
+    expiresAt: v.optional(v.number()), // Unix timestamp
+    profileId: v.optional(v.string()), // Platform-specific user ID
+    profileName: v.optional(v.string()),
+    // Facebook-specific fields for Pages
+    pageId: v.optional(v.string()), // Facebook Page ID
+    pageAccessToken: v.optional(v.string()), // Page access token for posting
+    pageName: v.optional(v.string()), // Page name
+  })
+    .index('by_user', ['userId'])
+    .index('by_user_and_platform', ['userId', 'platform']),
+  automations: defineTable({
+    userId: v.string(),
+    name: v.string(),
+    type: v.string(), // 'Generate post'
+    platform: v.string(), // 'LinkedIn post' or 'Facebook post'
+    description: v.string(), // Instructions for AI generation
+    example: v.optional(v.string()), // Example output
+    isActive: v.boolean(),
+  })
+    .index('by_user', ['userId'])
+    .index('by_user_and_platform', ['userId', 'platform']),
+  generatedPosts: defineTable({
+    eventId: v.id('events'),
+    userId: v.string(),
+    automationId: v.id('automations'),
+    platform: v.string(), // 'linkedin' or 'facebook'
+    content: v.string(), // Generated post content
+    status: v.string(), // 'draft', 'posted', 'failed'
+    postedAt: v.optional(v.number()), // Unix timestamp when posted
+    platformPostId: v.optional(v.string()), // ID from social media platform
+  })
+    .index('by_event', ['eventId'])
+    .index('by_user', ['userId'])
+    .index('by_automation', ['automationId']),
+  followUpEmails: defineTable({
+    eventId: v.id('events'),
+    userId: v.string(),
+    content: v.string(), // Generated email content
+    createdAt: v.number(), // Unix timestamp
+  })
+    .index('by_event', ['eventId'])
+    .index('by_user', ['userId']),
 });

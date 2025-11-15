@@ -20,8 +20,10 @@ import {
   ExternalLink,
   Bot,
   FileText,
+  List,
+  Grid3x3,
 } from 'lucide-react';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Switch } from '@/components/ui/switch';
 import { detectMeetingPlatform, getPlatformName, type MeetingPlatform } from '@/app/utils/meetingPlatform';
 import { toast } from 'sonner';
@@ -88,6 +90,8 @@ function EventsContent() {
   const [selectedCalendarId, setSelectedCalendarId] = useState<string>('all');
   const [currentDate, setCurrentDate] = useState(new Date());
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [viewMode, setViewMode] = useState<'calendar' | 'list'>('calendar');
+  const [selectedDate, setSelectedDate] = useState(new Date());
   const [selectedEvent, setSelectedEvent] = useState<{
     _id: string;
     calendarId: string;
@@ -137,17 +141,23 @@ function EventsContent() {
     return date.getDate();
   };
 
-  const isUpcoming = (dateString: string) => {
-    return new Date(dateString) >= new Date();
-  };
-
-  // Filter events by selected calendar and upcoming
+  // Filter events by selected calendar (show all events, past and future)
   const filteredEvents =
     events?.filter((event) => {
-      const isUpcomingEvent = isUpcoming(event.startTime);
       const matchesCalendar = selectedCalendarId === 'all' || event.calendarId === selectedCalendarId;
-      return isUpcomingEvent && matchesCalendar;
+      return matchesCalendar;
     }) || [];
+
+  // Filter events for the selected date (for list view)
+  const eventsForSelectedDate = filteredEvents.filter((event) => {
+    const eventDate = new Date(event.startTime);
+    const selected = new Date(selectedDate);
+    return (
+      eventDate.getFullYear() === selected.getFullYear() &&
+      eventDate.getMonth() === selected.getMonth() &&
+      eventDate.getDate() === selected.getDate()
+    );
+  });
 
   // Group events by date
   const eventsByDate = filteredEvents.reduce(
@@ -204,6 +214,27 @@ function EventsContent() {
     });
   };
 
+  const navigateDate = (direction: 'prev' | 'next') => {
+    setSelectedDate((prev) => {
+      const newDate = new Date(prev);
+      if (direction === 'prev') {
+        newDate.setDate(prev.getDate() - 1);
+      } else {
+        newDate.setDate(prev.getDate() + 1);
+      }
+      return newDate;
+    });
+  };
+
+  const formatDateForDisplay = (date: Date) => {
+    return date.toLocaleDateString('en-US', {
+      weekday: 'long',
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+    });
+  };
+
   const monthName = currentDate.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
   const calendarDays = getCalendarDays();
   const selectedCalendar = calendars?.find((c) => c._id === selectedCalendarId);
@@ -224,8 +255,32 @@ function EventsContent() {
   return (
     <div className="container mx-auto p-8 max-w-7xl">
       <div className="mb-8">
-        <h1 className="text-4xl font-bold mb-2">Calendar</h1>
-        <p className="text-muted-foreground">View upcoming events and request notetakers</p>
+        <div className="flex items-center justify-between mb-2">
+          <div>
+            <h1 className="text-4xl font-bold mb-2">Events</h1>
+            <p className="text-muted-foreground">View all events and request notetakers</p>
+          </div>
+          <div className="flex items-center gap-2">
+            <Button
+              variant={viewMode === 'calendar' ? 'default' : 'outline'}
+              size="sm"
+              onClick={() => setViewMode('calendar')}
+              className="gap-2"
+            >
+              <Grid3x3 className="h-4 w-4" />
+              Calendar
+            </Button>
+            <Button
+              variant={viewMode === 'list' ? 'default' : 'outline'}
+              size="sm"
+              onClick={() => setViewMode('list')}
+              className="gap-2"
+            >
+              <List className="h-4 w-4" />
+              List
+            </Button>
+          </div>
+        </div>
       </div>
 
       {calendars === undefined ? (
@@ -275,73 +330,150 @@ function EventsContent() {
           </Card>
 
           {/* Calendar View */}
-          {events === undefined ? (
+          {viewMode === 'calendar' ? (
+            events === undefined ? (
+              <div className="text-center py-8 text-muted-foreground">Loading events...</div>
+            ) : (
+              <Card>
+                <CardHeader>
+                  <div className="flex items-center justify-between">
+                    <CardTitle>{monthName}</CardTitle>
+                    <div className="flex items-center gap-2">
+                      <Button variant="outline" size="sm" onClick={() => navigateMonth('prev')}>
+                        <ChevronLeft className="h-4 w-4" />
+                      </Button>
+                      <Button variant="outline" size="sm" onClick={() => setCurrentDate(new Date())}>
+                        Today
+                      </Button>
+                      <Button variant="outline" size="sm" onClick={() => navigateMonth('next')}>
+                        <ChevronRight className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  {/* Calendar Grid */}
+                  <div className="grid grid-cols-7 gap-2 mb-4">
+                    {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map((day) => (
+                      <div key={day} className="text-center text-sm font-medium text-muted-foreground p-2">
+                        {day}
+                      </div>
+                    ))}
+                  </div>
+                  <div className="grid grid-cols-7 gap-2">
+                    {calendarDays.map((day, index) => {
+                      const isCurrentMonth = day.date.getMonth() === currentDate.getMonth();
+                      const isToday = day.date.toDateString() === new Date().toDateString();
+                      const isPast = day.date < new Date() && !isToday;
+                      const hasEvents = day.events.length > 0;
+
+                      return (
+                        <div
+                          key={index}
+                          className={`border rounded-lg p-2 ${
+                            !isCurrentMonth ? 'opacity-30' : ''
+                          } ${isToday ? 'bg-primary/5 border-primary' : isPast ? 'bg-muted/30 opacity-75' : 'bg-background'}`}
+                        >
+                          <div className="flex items-center justify-between mb-1">
+                            <span className={`text-sm font-medium ${isToday ? 'text-primary' : 'text-foreground'}`}>
+                              {formatDay(day.date)}
+                            </span>
+                            {hasEvents && (
+                              <span className="text-xs bg-primary text-primary-foreground px-1.5 py-0.5 rounded">
+                                {day.events.length}
+                              </span>
+                            )}
+                          </div>
+                          <div className="space-y-1.5">
+                            {day.events.map((event) => {
+                              const eventDate = new Date(event.startTime);
+                              const isPastEvent = eventDate < new Date();
+                              return isPastEvent ? (
+                                <Link key={event._id} href={`/meetings/${event._id}`} className="block">
+                                  <EventCard
+                                    event={event}
+                                    calendars={calendars || []}
+                                    onToggleNotetaker={handleToggleNotetaker}
+                                    onCardClick={() => {}}
+                                    isListView={false}
+                                  />
+                                </Link>
+                              ) : (
+                                <EventCard
+                                  key={event._id}
+                                  event={event}
+                                  calendars={calendars || []}
+                                  onToggleNotetaker={handleToggleNotetaker}
+                                  onCardClick={() => setSelectedEvent(event)}
+                                  isListView={false}
+                                />
+                              );
+                            })}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </CardContent>
+              </Card>
+            )
+          ) : /* List View */
+          events === undefined ? (
             <div className="text-center py-8 text-muted-foreground">Loading events...</div>
           ) : (
             <Card>
               <CardHeader>
                 <div className="flex items-center justify-between">
-                  <CardTitle>{monthName}</CardTitle>
+                  <CardTitle>{formatDateForDisplay(selectedDate)}</CardTitle>
                   <div className="flex items-center gap-2">
-                    <Button variant="outline" size="sm" onClick={() => navigateMonth('prev')}>
+                    <Button variant="outline" size="sm" onClick={() => navigateDate('prev')}>
                       <ChevronLeft className="h-4 w-4" />
                     </Button>
-                    <Button variant="outline" size="sm" onClick={() => setCurrentDate(new Date())}>
+                    <Button variant="outline" size="sm" onClick={() => setSelectedDate(new Date())}>
                       Today
                     </Button>
-                    <Button variant="outline" size="sm" onClick={() => navigateMonth('next')}>
+                    <Button variant="outline" size="sm" onClick={() => navigateDate('next')}>
                       <ChevronRight className="h-4 w-4" />
                     </Button>
                   </div>
                 </div>
               </CardHeader>
               <CardContent>
-                {/* Calendar Grid */}
-                <div className="grid grid-cols-7 gap-2 mb-4">
-                  {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map((day) => (
-                    <div key={day} className="text-center text-sm font-medium text-muted-foreground p-2">
-                      {day}
-                    </div>
-                  ))}
-                </div>
-                <div className="grid grid-cols-7 gap-2">
-                  {calendarDays.map((day, index) => {
-                    const isCurrentMonth = day.date.getMonth() === currentDate.getMonth();
-                    const isToday = day.date.toDateString() === new Date().toDateString();
-                    const hasEvents = day.events.length > 0;
-
-                    return (
-                      <div
-                        key={index}
-                        className={`border rounded-lg p-2 ${
-                          !isCurrentMonth ? 'opacity-30' : ''
-                        } ${isToday ? 'bg-primary/5 border-primary' : 'bg-background'}`}
-                      >
-                        <div className="flex items-center justify-between mb-1">
-                          <span className={`text-sm font-medium ${isToday ? 'text-primary' : 'text-foreground'}`}>
-                            {formatDay(day.date)}
-                          </span>
-                          {hasEvents && (
-                            <span className="text-xs bg-primary text-primary-foreground px-1.5 py-0.5 rounded">
-                              {day.events.length}
-                            </span>
-                          )}
-                        </div>
-                        <div className="space-y-1">
-                          {day.events.map((event) => (
+                {eventsForSelectedDate.length === 0 ? (
+                  <div className="text-center py-12 text-muted-foreground">
+                    <CalendarIcon className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                    <p>No events scheduled for this day</p>
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    {eventsForSelectedDate
+                      .sort((a, b) => new Date(a.startTime).getTime() - new Date(b.startTime).getTime())
+                      .map((event) => {
+                        const eventDate = new Date(event.startTime);
+                        const isPastEvent = eventDate < new Date();
+                        return isPastEvent ? (
+                          <Link key={event._id} href={`/meetings/${event._id}`} className="block">
                             <EventCard
-                              key={event._id}
                               event={event}
                               calendars={calendars || []}
                               onToggleNotetaker={handleToggleNotetaker}
-                              onCardClick={() => setSelectedEvent(event)}
+                              onCardClick={() => {}}
+                              isListView={true}
                             />
-                          ))}
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
+                          </Link>
+                        ) : (
+                          <EventCard
+                            key={event._id}
+                            event={event}
+                            calendars={calendars || []}
+                            onToggleNotetaker={handleToggleNotetaker}
+                            onCardClick={() => setSelectedEvent(event)}
+                            isListView={true}
+                          />
+                        );
+                      })}
+                  </div>
+                )}
               </CardContent>
             </Card>
           )}
@@ -379,8 +511,10 @@ function EventsContent() {
 function EventCard({
   event,
   calendars,
-  onToggleNotetaker,
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  onToggleNotetaker, // Currently unused (switch is commented out)
   onCardClick,
+  isListView = false,
 }: {
   event: {
     _id: string;
@@ -399,6 +533,7 @@ function EventCard({
   calendars: Array<{ _id: string; calendarName: string; email: string }>;
   onToggleNotetaker: (eventId: string, currentValue: boolean) => void;
   onCardClick?: () => void;
+  isListView?: boolean;
 }) {
   const calendar = calendars.find((c) => c._id === event.calendarId);
   const platform = detectMeetingPlatform(event.meetingLink);
@@ -449,18 +584,21 @@ function EventCard({
     }
   };
 
+  const eventDate = new Date(event.startTime);
+  const isPastEvent = eventDate < new Date();
+
   return (
     <Card
-      className="p-2 hover:bg-accent transition-colors border-primary/20 cursor-pointer"
+      className={`${isListView ? 'p-4' : 'p-2'} hover:bg-accent transition-colors border-primary/20 cursor-pointer ${isPastEvent ? 'opacity-75' : ''}`}
       onClick={() => onCardClick?.()}
     >
       <CardContent className="p-0">
         <div className="space-y-2">
-          <div className="flex items-start justify-between gap-2">
+          <div className="flex items-start flex-col gap-2">
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-1.5 mb-1">
                 {/* {event.meetingLink && <PlatformIcon platform={platform} size="sm" />} */}
-                <h4 className="text-xs font-semibold line-clamp-2">{event.title}</h4>
+                <h4 className={`${isListView ? 'text-base' : 'text-xs'} font-semibold line-clamp-2`}>{event.title}</h4>
               </div>
               {event.notetakerRequested && (
                 <span className="inline-flex items-center gap-1 text-xs bg-primary/10 text-primary px-1.5 py-0.5 rounded">
@@ -468,24 +606,34 @@ function EventCard({
                   <span>Notetaker</span>
                 </span>
               )}
+              {isPastEvent && event.meetingBaasTranscription && (
+                <span className="inline-flex items-center gap-1 text-xs bg-green-500/10 text-green-600 px-1.5 py-0.5 rounded">
+                  <FileText className="h-3 w-3" />
+                  <span>Transcribed</span>
+                </span>
+              )}
             </div>
-            {event.meetingLink && (
-              <Switch
-                checked={event.notetakerRequested || false}
-                onCheckedChange={() => onToggleNotetaker(event._id, event.notetakerRequested || false)}
-                className="h-3 w-6 shrink-0"
-              />
-            )}
-            {event.meetingBaasTranscription && (
+            {/* {!isPastEvent && event.meetingLink && (
+              <div className="flex items-center gap-1">
+                <Switch
+                  checked={event.notetakerRequested || false}
+                  onCheckedChange={() => onToggleNotetaker(event._id, event.notetakerRequested || false)}
+                  className="h-3 w-6 shrink-0"
+                  title="Request Notetaker"
+                />
+                <span className="text-xs ml-2"> Notetaker</span>
+              </div>
+            )} */}
+            {/* {!isListView && event.meetingBaasTranscription && (
               <div className="flex items-center gap-1 text-xs bg-primary/10 text-primary px-2 py-1 rounded">
                 <FileText className="h-3 w-3" />
                 <span>Transcribed</span>
               </div>
-            )}
+            )} */}
           </div>
-          <div className="space-y-1 text-xs text-muted-foreground">
+          <div className={`space-y-1 ${isListView ? 'text-sm' : 'text-xs'} text-muted-foreground`}>
             <div className="flex items-center gap-1">
-              <Clock className="h-3 w-3 shrink-0" />
+              <Clock className={`${isListView ? 'h-4 w-4' : 'h-3 w-3'} shrink-0`} />
               <span className="truncate">
                 {formatTime(event.startTime)}
                 {event.endTime && ` - ${formatTime(event.endTime)}`}
@@ -538,6 +686,18 @@ function EventCard({
               </div>
             )}
             {event.description && <p className="text-xs line-clamp-2 mt-1">{event.description}</p>}
+
+            {/* {!isPastEvent && event.meetingLink && (
+              <div className="flex items-center gap-1">
+                <Switch
+                  checked={event.notetakerRequested || false}
+                  onCheckedChange={() => onToggleNotetaker(event._id, event.notetakerRequested || false)}
+                  className="h-3 w-6 shrink-0"
+                  title="Request Notetaker"
+                />
+                <span className="text-xs ml-2"> Notetaker</span>
+              </div>
+            )} */}
           </div>
         </div>
       </CardContent>
@@ -580,6 +740,15 @@ function EventDetailsModal({
 }) {
   const [isSendingBot, setIsSendingBot] = useState(false);
   const [isRecallingBot, setIsRecallingBot] = useState(false);
+  // Optimistic state for notetaker request - updates immediately
+  const [notetakerRequested, setNotetakerRequested] = useState(event?.notetakerRequested || false);
+
+  // Sync with event prop when it changes
+  useEffect(() => {
+    if (event) {
+      setNotetakerRequested(event.notetakerRequested || false);
+    }
+  }, [event]);
 
   if (!event) return null;
 
@@ -607,7 +776,7 @@ function EventDetailsModal({
   };
 
   const handleSendNotetakerBot = async () => {
-    if (!event.notetakerRequested) {
+    if (!notetakerRequested) {
       await onToggleNotetaker(event._id, false);
     }
 
@@ -623,6 +792,21 @@ function EventDetailsModal({
       toast.error('Failed to send notetaker bot. Please try again.');
     } finally {
       setIsSendingBot(false);
+    }
+  };
+
+  const handleToggleNotetaker = async (checked: boolean) => {
+    // Optimistically update UI immediately
+    setNotetakerRequested(checked);
+
+    try {
+      // Persist to database
+      await onToggleNotetaker(event._id, !checked);
+    } catch (error) {
+      // Revert on error
+      setNotetakerRequested(!checked);
+      console.error('Failed to toggle notetaker request:', error);
+      toast.error('Failed to toggle notetaker request');
     }
   };
 
@@ -671,7 +855,7 @@ function EventDetailsModal({
                   </span>
                 )}
               </div>
-              {event.notetakerRequested && (
+              {notetakerRequested && (
                 <span className="inline-flex items-center gap-1 text-xs bg-primary/10 text-primary px-2 py-1 rounded">
                   <span>✓</span>
                   <span>Notetaker requested</span>
@@ -781,10 +965,7 @@ function EventDetailsModal({
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <span className="text-sm font-medium">Request Notetaker</span>
-                  <Switch
-                    checked={!!event.notetakerRequested}
-                    onCheckedChange={() => onToggleNotetaker(event._id, !!event.notetakerRequested)}
-                  />
+                  <Switch checked={notetakerRequested} onCheckedChange={handleToggleNotetaker} />
                 </div>
               </div>
             )}
@@ -845,13 +1026,33 @@ function EventDetailsModal({
                     try {
                       const transcriptData = JSON.parse(event.meetingBaasTranscription);
                       if (Array.isArray(transcriptData)) {
-                        return transcriptData
-                          .slice(0, 3)
-                          .map((item: { text?: string; transcript?: string }, idx: number) => (
-                            <p key={idx} className="mb-1">
-                              {item.text || item.transcript || JSON.stringify(item)}
-                            </p>
-                          ));
+                        return transcriptData.slice(0, 2).map(
+                          (
+                            item: {
+                              id?: number;
+                              speaker?: string;
+                              start_time?: number;
+                              words?: Array<{ text?: string }>;
+                            },
+                            idx: number,
+                          ) => {
+                            const words = item.words || [];
+                            const spokenText = words
+                              .map((word) => word.text || '')
+                              .join(' ')
+                              .trim();
+                            const preview = spokenText.substring(0, 100) + (spokenText.length > 100 ? '...' : '');
+
+                            return (
+                              <div key={item.id || idx} className="mb-2">
+                                {item.speaker && (
+                                  <span className="font-semibold text-primary text-xs">{item.speaker}: </span>
+                                )}
+                                <span>{preview || 'No transcription available'}</span>
+                              </div>
+                            );
+                          },
+                        );
                       }
                       return (
                         transcriptData.text ||
@@ -885,22 +1086,50 @@ function TranscriptionModal({
 }) {
   if (!transcription) return null;
 
+  const formatTime = (seconds: number) => {
+    const mins = Math.floor(seconds / 60);
+    const secs = Math.floor(seconds % 60);
+    return `${mins}:${secs.toString().padStart(2, '0')}`;
+  };
+
   const formatTranscription = () => {
     try {
       const transcriptData = JSON.parse(transcription);
       if (Array.isArray(transcriptData)) {
         return transcriptData.map(
-          (item: { speaker?: string; timestamp?: string; text?: string; transcript?: string }, idx: number) => (
-            <div key={idx} className="mb-4 p-3 bg-muted rounded-md">
-              {item.speaker && (
-                <div className="font-semibold text-sm mb-1 text-primary">
-                  {item.speaker}:{' '}
-                  {item.timestamp && <span className="text-muted-foreground text-xs">({item.timestamp})</span>}
+          (
+            item: {
+              id?: number;
+              speaker?: string;
+              start_time?: number;
+              words?: Array<{ text?: string; start_time?: number; end_time?: number }>;
+            },
+            idx: number,
+          ) => {
+            // Extract words and combine them into readable text
+            const words = item.words || [];
+            const spokenText = words
+              .map((word) => word.text || '')
+              .join(' ')
+              .trim();
+
+            // Format start time
+            const timeDisplay = item.start_time !== undefined ? formatTime(item.start_time) : '';
+
+            return (
+              <div key={item.id || idx} className="mb-4 p-4 bg-muted rounded-md border-l-4 border-primary">
+                <div className="flex items-center gap-2 mb-2">
+                  {item.speaker && <div className="font-semibold text-base text-primary">{item.speaker}</div>}
+                  {timeDisplay && (
+                    <span className="text-xs text-muted-foreground font-mono bg-background px-2 py-1 rounded">
+                      {timeDisplay}
+                    </span>
+                  )}
                 </div>
-              )}
-              <p className="text-sm">{item.text || item.transcript || JSON.stringify(item)}</p>
-            </div>
-          ),
+                {spokenText && <p className="text-sm leading-relaxed">{spokenText}</p>}
+              </div>
+            );
+          },
         );
       }
       return <pre className="whitespace-pre-wrap text-sm">{JSON.stringify(transcriptData, null, 2)}</pre>;
