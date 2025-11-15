@@ -7,11 +7,22 @@ import { useAuth } from '@workos-inc/authkit-nextjs/components';
 import type { User } from '@workos-inc/node';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Calendar as CalendarIcon, Clock, Video, MapPin, Users, ExternalLink, Bot, RefreshCw } from 'lucide-react';
+import {
+  Calendar as CalendarIcon,
+  Clock,
+  Video,
+  MapPin,
+  Users,
+  ExternalLink,
+  Bot,
+  RefreshCw,
+  FileText,
+} from 'lucide-react';
 import { Switch } from '@/components/ui/switch';
 import { Button } from '@/components/ui/button';
 import { useState } from 'react';
 import { detectMeetingPlatform, getPlatformName, type MeetingPlatform } from '@/app/utils/meetingPlatform';
+import { toast } from 'sonner';
 
 export default function Home() {
   return (
@@ -46,13 +57,17 @@ function Header() {
 function SignInForm() {
   return (
     <div className="flex flex-col gap-8 w-96 mx-auto">
-      <p>Log in to see the numbers</p>
-      <a href="/sign-in">
-        <button className="bg-foreground text-background px-4 py-2 rounded-md">Sign in</button>
-      </a>
-      <a href="/sign-up">
-        <button className="bg-foreground text-background px-4 py-2 rounded-md">Sign up</button>
-      </a>
+      <h1 className="text-2xl font-bold">Welcome to Post Meet</h1>
+      <div className="flex flex-row gap-2">
+        <a href="/sign-in">
+          <button className="bg-foreground text-background px-4 py-2 rounded-md">Sign in</button>
+        </a>
+        <a href="/sign-up">
+          <button className="bg-background text-foreground border border-foreground px-4 py-2 rounded-md">
+            Sign up
+          </button>
+        </a>
+      </div>
     </div>
   );
 }
@@ -65,6 +80,8 @@ function Content() {
   const refreshCalendarEvents = useMutation(api.eventsQueries.refreshCalendarEvents);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const sendBotToMeetingAction = useAction((api as any).botService.sendBotToMeetingManually);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const recallBotAction = useAction((api as any).botService.recallBot);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [selectedEvent, setSelectedEvent] = useState<{
     _id: string;
@@ -78,7 +95,13 @@ function Content() {
     notetakerRequested?: boolean | null;
     calendarName?: string;
     htmlLink?: string;
+    botId?: string;
+    meetingBaasBotId?: string;
+    botStatus?: string;
+    meetingBaasTranscription?: string;
   } | null>(null);
+  const [transcriptionModalOpen, setTranscriptionModalOpen] = useState(false);
+  const [selectedTranscription, setSelectedTranscription] = useState<string | null>(null);
 
   const handleToggleNotetaker = async (eventId: string, currentValue: boolean | null) => {
     try {
@@ -89,6 +112,7 @@ function Content() {
       });
     } catch (error) {
       console.error('Failed to toggle notetaker request:', error);
+      toast.error('Failed to toggle notetaker request');
     }
   };
 
@@ -110,6 +134,7 @@ function Content() {
       );
     } catch (error) {
       console.error('Failed to refresh calendars:', error);
+      toast.error('Failed to refresh calendars');
     } finally {
       // Keep loading state for a bit to show feedback
       setTimeout(() => setIsRefreshing(false), 1000);
@@ -206,6 +231,20 @@ function Content() {
         onClose={() => setSelectedEvent(null)}
         onToggleNotetaker={handleToggleNotetaker}
         sendBotToMeeting={sendBotToMeetingAction}
+        recallBot={recallBotAction}
+        onViewTranscription={(transcription) => {
+          setSelectedTranscription(transcription);
+          setTranscriptionModalOpen(true);
+        }}
+      />
+      <TranscriptionModal
+        open={transcriptionModalOpen}
+        onClose={() => {
+          setTranscriptionModalOpen(false);
+          setSelectedTranscription(null);
+        }}
+        transcription={selectedTranscription}
+        eventTitle={selectedEvent?.title}
       />
     </div>
   );
@@ -307,7 +346,7 @@ function EventCard({
                 </span>
               )}
             </div>
-            {!isPast && (
+            {!isPast && event.meetingLink && (
               <div className="flex items-center gap-2 bg-background/50 p-2 rounded-md border shrink-0">
                 <span className="text-sm font-medium">Notetaker</span>
                 <Switch
@@ -383,6 +422,8 @@ function EventDetailsModal({
   onClose,
   onToggleNotetaker,
   sendBotToMeeting,
+  recallBot,
+  onViewTranscription,
 }: {
   event: {
     _id: string;
@@ -396,12 +437,19 @@ function EventDetailsModal({
     notetakerRequested?: boolean | null;
     calendarName?: string;
     htmlLink?: string;
+    botId?: string;
+    meetingBaasBotId?: string;
+    botStatus?: string;
+    meetingBaasTranscription?: string;
   } | null;
   onClose: () => void;
   onToggleNotetaker: (eventId: string, currentValue: boolean | null) => void;
   sendBotToMeeting: (args: { eventId: string }) => Promise<{ success: boolean }>;
+  recallBot: (args: { eventId: string }) => Promise<{ success: boolean }>;
+  onViewTranscription?: (transcription: string) => void;
 }) {
   const [isSendingBot, setIsSendingBot] = useState(false);
+  const [isRecallingBot, setIsRecallingBot] = useState(false);
 
   if (!event) return null;
 
@@ -438,14 +486,33 @@ function EventDetailsModal({
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         eventId: event._id as any,
       });
-      alert('Notetaker bot will join the meeting at the scheduled time!');
+      toast.success('Notetaker bot will join the meeting at the scheduled time!');
     } catch (error) {
       console.error('Failed to send notetaker bot:', error);
-      alert('Failed to send notetaker bot. Please try again.');
+      toast.error('Failed to send notetaker bot. Please try again.');
     } finally {
       setIsSendingBot(false);
     }
   };
+
+  const handleRecallBot = async () => {
+    setIsRecallingBot(true);
+    try {
+      await recallBot({
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        eventId: event._id as any,
+      });
+      toast.success('Bot transcription retrieved successfully!');
+    } catch (error) {
+      console.error('Failed to recall bot:', error);
+      toast.error('Failed to recall bot. Please try again.');
+    } finally {
+      setIsRecallingBot(false);
+    }
+  };
+
+  // Check if bot has been sent
+  const hasBot = !!(event.botId || event.meetingBaasBotId);
 
   const eventStart = new Date(event.startTime);
   const eventEnd = event.endTime ? new Date(event.endTime) : null;
@@ -557,26 +624,39 @@ function EventDetailsModal({
           </div>
 
           <div className="flex flex-col gap-3 pt-4 border-t">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <span className="text-sm font-medium">Request Notetaker</span>
-                <Switch
-                  checked={!!event.notetakerRequested}
-                  onCheckedChange={() => onToggleNotetaker(event._id, !!event.notetakerRequested)}
-                />
+            {event.meetingLink && (
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <span className="text-sm font-medium">Request Notetaker</span>
+                  <Switch
+                    checked={!!event.notetakerRequested}
+                    onCheckedChange={() => onToggleNotetaker(event._id, !!event.notetakerRequested)}
+                  />
+                </div>
               </div>
-            </div>
+            )}
 
             <div className="flex gap-3">
               {isUpcoming || isCurrentlyHappening ? (
-                <button
-                  onClick={handleSendNotetakerBot}
-                  disabled={isSendingBot || !event.meetingLink}
-                  className="flex-1 flex items-center justify-center gap-2 bg-primary text-primary-foreground px-4 py-2 rounded-md hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  <Bot className="h-4 w-4" />
-                  {isSendingBot ? 'Sending...' : 'Send Notetaker Bot'}
-                </button>
+                hasBot ? (
+                  <button
+                    onClick={handleRecallBot}
+                    disabled={isRecallingBot}
+                    className="flex-1 flex items-center justify-center gap-2 bg-primary text-primary-foreground px-4 py-2 rounded-md hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    <Bot className="h-4 w-4" />
+                    {isRecallingBot ? 'Retrieving...' : 'Recall Bot'}
+                  </button>
+                ) : (
+                  <button
+                    onClick={handleSendNotetakerBot}
+                    disabled={isSendingBot || !event.meetingLink}
+                    className="flex-1 flex items-center justify-center gap-2 bg-primary text-primary-foreground px-4 py-2 rounded-md hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    <Bot className="h-4 w-4" />
+                    {isSendingBot ? 'Sending...' : 'Send Notetaker Bot'}
+                  </button>
+                )
               ) : null}
 
               {event.htmlLink && (
@@ -589,7 +669,105 @@ function EventDetailsModal({
                 </button>
               )}
             </div>
+
+            {/* Transcription Section */}
+            {event.meetingBaasTranscription && (
+              <div className="pt-4 border-t">
+                <div className="flex items-center justify-between mb-2">
+                  <div className="flex items-center gap-2">
+                    <FileText className="h-4 w-4 text-muted-foreground" />
+                    <span className="text-sm font-medium">Transcription Available</span>
+                  </div>
+                  {onViewTranscription && (
+                    <button
+                      onClick={() => onViewTranscription(event.meetingBaasTranscription!)}
+                      className="text-sm text-primary hover:underline"
+                    >
+                      View Full Transcription
+                    </button>
+                  )}
+                </div>
+                <div className="text-sm text-muted-foreground bg-muted p-3 rounded-md max-h-32 overflow-y-auto">
+                  {(() => {
+                    try {
+                      const transcriptData = JSON.parse(event.meetingBaasTranscription);
+                      if (Array.isArray(transcriptData)) {
+                        return transcriptData
+                          .slice(0, 3)
+                          .map((item: { text?: string; transcript?: string }, idx: number) => (
+                            <p key={idx} className="mb-1">
+                              {item.text || item.transcript || JSON.stringify(item)}
+                            </p>
+                          ));
+                      }
+                      return (
+                        transcriptData.text ||
+                        transcriptData.transcript ||
+                        event.meetingBaasTranscription.substring(0, 200) + '...'
+                      );
+                    } catch {
+                      return event.meetingBaasTranscription.substring(0, 200) + '...';
+                    }
+                  })()}
+                </div>
+              </div>
+            )}
           </div>
+        </DialogDescription>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+function TranscriptionModal({
+  open,
+  onClose,
+  transcription,
+  eventTitle,
+}: {
+  open: boolean;
+  onClose: () => void;
+  transcription: string | null;
+  eventTitle?: string;
+}) {
+  if (!transcription) return null;
+
+  const formatTranscription = () => {
+    try {
+      const transcriptData = JSON.parse(transcription);
+      if (Array.isArray(transcriptData)) {
+        return transcriptData.map(
+          (item: { speaker?: string; timestamp?: string; text?: string; transcript?: string }, idx: number) => (
+            <div key={idx} className="mb-4 p-3 bg-muted rounded-md">
+              {item.speaker && (
+                <div className="font-semibold text-sm mb-1 text-primary">
+                  {item.speaker}:{' '}
+                  {item.timestamp && <span className="text-muted-foreground text-xs">({item.timestamp})</span>}
+                </div>
+              )}
+              <p className="text-sm">{item.text || item.transcript || JSON.stringify(item)}</p>
+            </div>
+          ),
+        );
+      }
+      return <pre className="whitespace-pre-wrap text-sm">{JSON.stringify(transcriptData, null, 2)}</pre>;
+    } catch {
+      return <pre className="whitespace-pre-wrap text-sm">{transcription}</pre>;
+    }
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={(isOpen) => !isOpen && onClose()}>
+      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2">
+            <FileText className="h-5 w-5" />
+            Meeting Transcription
+            {eventTitle && <span className="text-muted-foreground font-normal">- {eventTitle}</span>}
+          </DialogTitle>
+        </DialogHeader>
+        <DialogDescription className="pt-4">
+          <div className="space-y-2">{formatTranscription()}</div>
         </DialogDescription>
       </DialogContent>
     </Dialog>

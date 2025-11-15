@@ -28,7 +28,8 @@ async function joinMeetingHelper(meetingUrl: string, botName?: string) {
   const joinResult = await client.joinMeeting({
     meeting_url: meetingUrl,
     bot_name: botName || 'Notetaker Bot',
-    reserved: false,
+    speech_to_text: 'Gladia',
+    // reserved: false,
     // recording_mode: 'speaker_view',
     // speech_to_text: { provider: 'Gladia' },
   });
@@ -116,6 +117,7 @@ export const sendBotToMeeting = internalAction({
         await ctx.runMutation(internal.eventsQueries.updateMeetingBaasBotInfo, {
           eventId: args.eventId,
           botId: event.meetingBaasBotId,
+          botStatus: 'in_meeting',
         });
         return meetingData;
       } catch (error) {
@@ -130,6 +132,7 @@ export const sendBotToMeeting = internalAction({
       await ctx.runMutation(internal.eventsQueries.updateMeetingBaasBotInfo, {
         eventId: args.eventId,
         botId: botData.bot_id,
+        botStatus: 'in_meeting', // Set status to in_meeting when bot is sent
       });
       return botData;
     } catch (error) {
@@ -202,7 +205,7 @@ export const checkAndSendBotsForUpcomingEvents = internalAction({
 
         // Check if it's time to send the bot
         if (now >= joinTime && now < eventStart) {
-          // Check if bot hasn't been sent yet
+          // Check if bot hasn't been sent yet (don't send another bot if one already exists)
           if (!event.meetingBaasBotId) {
             await ctx.runAction(internal.meetingBaas.sendBotToMeeting, {
               eventId: event._id,
@@ -222,7 +225,7 @@ export const pollEndedMeetingsForTranscripts = internalAction({
   handler: async (ctx) => {
     const now = new Date();
 
-    // Get all events that have ended and have Meeting BaaS bots but no transcription yet
+    // Get all events with bots in meeting status (active events that need transcription)
     const events = await ctx.runQuery(internal.eventsQueries.getEndedEventsWithMeetingBaasBots, {
       currentTime: now.toISOString(),
     });
@@ -238,15 +241,17 @@ export const pollEndedMeetingsForTranscripts = internalAction({
         // Get meeting data with transcripts
         const meetingData = await getMeetingDataHelper(event.meetingBaasBotId);
 
+        console.log('meetingData', JSON.stringify(meetingData, null, 2));
+
         // Extract transcription data (handle different possible response structures)
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const meetingDataAny = meetingData as any;
-        const transcription = meetingDataAny.transcripts
-          ? JSON.stringify(meetingDataAny.transcripts)
-          : meetingDataAny.transcript || meetingDataAny.transcription || null;
+        const transcription = meetingDataAny?.bot_data?.transcripts
+          ? JSON.stringify(meetingDataAny?.bot_data?.transcripts)
+          : null;
 
-        // Update event with transcription if available
-        if (transcription) {
+        // Update event with transcription if available (save as it comes, even if meeting is still active)
+        if (transcription && !event.meetingBaasTranscription) {
           await ctx.runMutation(internal.eventsQueries.updateMeetingBaasTranscription, {
             eventId: event._id,
             transcription: transcription,
@@ -255,25 +260,33 @@ export const pollEndedMeetingsForTranscripts = internalAction({
 
         // Check if meeting has ended (duration is available or status indicates ended)
         const meetingEnded =
-          meetingDataAny.duration !== undefined ||
-          meetingDataAny.status === 'ended' ||
-          meetingDataAny.meeting_status === 'ended';
+          meetingDataAny.bot_data?.bot?.ended_at !== null && meetingDataAny.bot_data?.bot?.ended_at !== undefined;
 
         if (meetingEnded && event.meetingBaasBotId) {
           // Schedule leaving the meeting and deleting bot data
           // Leave immediately
-          try {
-            await leaveMeetingHelper(event.meetingBaasBotId);
-            console.log(`Left Meeting BaaS bot ${event.meetingBaasBotId} from meeting`);
-          } catch (error) {
-            console.error(`Failed to leave Meeting BaaS bot ${event.meetingBaasBotId}:`, error);
-          }
+          //   try {
+          //     await leaveMeetingHelper(event.meetingBaasBotId);
+          //     console.log(`Left Meeting BaaS bot ${event.meetingBaasBotId} from meeting`);
+          //   } catch (error) {
+          //     console.error(`Failed to leave Meeting BaaS bot ${event.meetingBaasBotId}:`, error);
+          //   }
 
-          // Schedule deletion after 5 minutes to ensure transcription is saved
-          await ctx.scheduler.runAfter(5 * 60 * 1000, internal.meetingBaas.deleteBotData, {
+          // Only schedule deletion if transcription exists
+          // Check if transcription was saved (either from this poll or already exists)
+          const updatedEvent = await ctx.runQuery(internal.eventsQueries.getEventById, {
             eventId: event._id,
-            botId: event.meetingBaasBotId,
           });
+
+          if (updatedEvent?.meetingBaasTranscription) {
+            // Schedule deletion after 5 minutes to ensure transcription is saved
+            await ctx.scheduler.runAfter(5 * 60 * 1000, internal.meetingBaas.deleteBotData, {
+              eventId: event._id,
+              botId: event.meetingBaasBotId,
+            });
+          } else {
+            console.log(`Skipping bot deletion for event ${event._id} - no transcription available yet`);
+          }
         }
       } catch (error) {
         console.error(`Failed to process transcript for event ${event._id}:`, error);
@@ -290,10 +303,70 @@ export const deleteBotData = internalAction({
   },
   handler: async (ctx, args) => {
     try {
+      // Check if event has transcription before deleting
+      const event = await ctx.runQuery(internal.eventsQueries.getEventById, {
+        eventId: args.eventId,
+      });
+
+      if (!event) {
+        console.log(`Event ${args.eventId} not found, skipping bot deletion`);
+        return;
+      }
+
+      if (!event.meetingBaasTranscription) {
+        console.log(`Skipping bot deletion for event ${args.eventId} - no transcription available`);
+        return;
+      }
+
       await deleteBotDataHelper(args.botId);
       console.log(`Deleted Meeting BaaS bot data for ${args.botId}`);
     } catch (error) {
       console.error(`Failed to delete Meeting BaaS bot data ${args.botId}:`, error);
+    }
+  },
+});
+
+// Internal action to recall bot and get transcription
+export const recallBotAndGetTranscript = internalAction({
+  args: {
+    eventId: v.id('events'),
+  },
+  handler: async (ctx, args) => {
+    const event = await ctx.runQuery(internal.eventsQueries.getEventById, {
+      eventId: args.eventId,
+    });
+
+    if (!event) {
+      throw new Error('Event not found');
+    }
+
+    if (!event.meetingBaasBotId) {
+      throw new Error('No bot found for this event');
+    }
+
+    try {
+      // Get meeting data with transcripts
+      const meetingData = await getMeetingDataHelper(event.meetingBaasBotId);
+
+      // Extract transcription data
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const meetingDataAny = meetingData as any;
+      const transcription = meetingDataAny.transcripts
+        ? JSON.stringify(meetingDataAny.transcripts)
+        : meetingDataAny.transcript || meetingDataAny.transcription || null;
+
+      // Update event with transcription
+      if (transcription) {
+        await ctx.runMutation(internal.eventsQueries.updateMeetingBaasTranscription, {
+          eventId: args.eventId,
+          transcription: transcription,
+        });
+      }
+
+      return { success: true, transcription };
+    } catch (error) {
+      console.error('Failed to recall bot and get transcript:', error);
+      throw error;
     }
   },
 });

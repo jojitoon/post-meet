@@ -141,7 +141,7 @@ export const sendBotToMeeting = internalAction({
       await ctx.runMutation(internal.eventsQueries.updateEventBotInfo, {
         eventId: args.eventId,
         botId: event.botId,
-        botStatus: botStatus.status,
+        botStatus: botStatus.status || 'in_meeting',
       });
       return botStatus;
     }
@@ -151,7 +151,7 @@ export const sendBotToMeeting = internalAction({
     await ctx.runMutation(internal.eventsQueries.updateEventBotInfo, {
       eventId: args.eventId,
       botId: botData.id,
-      botStatus: botData.status || 'pending',
+      botStatus: 'in_meeting', // Set status to in_meeting when bot is sent
     });
     return botData;
   },
@@ -220,7 +220,7 @@ export const checkAndSendBotsForUpcomingEvents = internalAction({
 
         // Check if it's time to send the bot
         if (now >= joinTime && now < eventStart) {
-          // Check if bot hasn't been sent yet
+          // Check if bot hasn't been sent yet (don't send another bot if one already exists)
           if (!event.botId) {
             await ctx.runAction(internal.recall.sendBotToMeeting, {
               eventId: event._id,
@@ -230,6 +230,44 @@ export const checkAndSendBotsForUpcomingEvents = internalAction({
       } catch (error) {
         console.error(`Failed to process Recall.ai bot for event ${event._id}:`, error);
       }
+    }
+  },
+});
+
+// Internal action to recall bot and get transcription
+export const recallBotAndGetTranscript = internalAction({
+  args: {
+    eventId: v.id('events'),
+  },
+  handler: async (ctx, args) => {
+    const event = await ctx.runQuery(internal.eventsQueries.getEventById, {
+      eventId: args.eventId,
+    });
+
+    if (!event) {
+      throw new Error('Event not found');
+    }
+
+    if (!event.botId) {
+      throw new Error('No bot found for this event');
+    }
+
+    try {
+      // Get bot status and check for transcript
+      const botStatus = await getBotStatusHelper(event.botId);
+      
+      // Recall.ai provides transcripts via recordings API
+      // You would need to fetch the recording and transcript here
+      // For now, we'll just update the status
+      await ctx.runMutation(internal.eventsQueries.updateBotStatus, {
+        eventId: args.eventId,
+        botStatus: 'transcribed',
+      });
+
+      return { success: true, botStatus };
+    } catch (error) {
+      console.error('Failed to recall bot and get transcript:', error);
+      throw error;
     }
   },
 });

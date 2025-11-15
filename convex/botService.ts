@@ -96,3 +96,66 @@ export const pollEndedMeetingsForTranscripts = internalAction({
     }
   },
 });
+
+// Public action to recall bot and get transcription (called from UI)
+export const recallBot = action({
+  args: {
+    eventId: v.id('events'),
+  },
+  handler: async (ctx, args) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) {
+      throw new Error('Not authenticated');
+    }
+
+    // Get event to verify ownership
+    const event = await ctx.runQuery(internal.eventsQueries.getEventById, {
+      eventId: args.eventId,
+    });
+
+    if (!event) {
+      throw new Error('Event not found');
+    }
+
+    if (event.userId !== identity.subject) {
+      throw new Error('Not authorized to recall bot for this event');
+    }
+
+    // Trigger the internal action to recall the bot
+    await ctx.scheduler.runAfter(0, internal.botService.recallBotInternal, {
+      eventId: args.eventId,
+    });
+
+    return { success: true };
+  },
+});
+
+// Internal action to recall bot and get transcription
+export const recallBotInternal = internalAction({
+  args: {
+    eventId: v.id('events'),
+  },
+  handler: async (ctx, args) => {
+    const event = await ctx.runQuery(internal.eventsQueries.getEventById, {
+      eventId: args.eventId,
+    });
+
+    if (!event) {
+      throw new Error('Event not found');
+    }
+
+    if (shouldUseRecall()) {
+      // Use Recall.ai
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      return await ctx.runAction((internal as any).recall.recallBotAndGetTranscript, {
+        eventId: args.eventId,
+      });
+    } else {
+      // Use Meeting BaaS
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      return await ctx.runAction((internal as any).meetingBaas.recallBotAndGetTranscript, {
+        eventId: args.eventId,
+      });
+    }
+  },
+});

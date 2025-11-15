@@ -18,16 +18,31 @@ export const updateEventBotInfo = internalMutation({
   },
 });
 
+// Internal mutation to update bot status only
+export const updateBotStatus = internalMutation({
+  args: {
+    eventId: v.id('events'),
+    botStatus: v.string(),
+  },
+  handler: async (ctx, args) => {
+    await ctx.db.patch(args.eventId, {
+      botStatus: args.botStatus,
+    });
+  },
+});
+
 // Internal mutation to update Meeting BaaS bot information
 export const updateMeetingBaasBotInfo = internalMutation({
   args: {
     eventId: v.id('events'),
     botId: v.string(),
+    botStatus: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
     await ctx.db.patch(args.eventId, {
       meetingBaasBotId: args.botId,
       botProvider: 'meeting_baas',
+      botStatus: args.botStatus || 'in_meeting',
     });
   },
 });
@@ -41,6 +56,31 @@ export const updateMeetingBaasTranscription = internalMutation({
   handler: async (ctx, args) => {
     await ctx.db.patch(args.eventId, {
       meetingBaasTranscription: args.transcription,
+      botStatus: 'transcribed', // Set status to transcribed after getting transcription
+    });
+  },
+});
+
+// Internal query to get events with bots in meeting (for polling transcripts)
+export const getEventsWithBotsInMeeting = internalQuery({
+  args: {
+    currentTime: v.string(),
+  },
+  handler: async (ctx, args) => {
+    const now = new Date(args.currentTime);
+
+    // Get all events with bots
+    const allEvents = await ctx.db.query('events').collect();
+
+    return allEvents.filter((event) => {
+      const eventEnd = new Date(event.endTime);
+      const eventStart = new Date(event.startTime);
+      // Event has ended or is currently happening, has a bot, and bot status is 'in_meeting'
+      return (
+        (eventEnd <= now || eventStart <= now) &&
+        (event.botId !== undefined || event.meetingBaasBotId !== undefined) &&
+        event.botStatus === 'in_meeting'
+      );
     });
   },
 });
@@ -56,12 +96,12 @@ export const updateCalendarToken = internalMutation({
     const update: { accessToken: string; refreshToken?: string } = {
       accessToken: args.accessToken,
     };
-    
+
     // Only update refresh token if provided (Google sometimes doesn't return a new one)
     if (args.refreshToken) {
       update.refreshToken = args.refreshToken;
     }
-    
+
     await ctx.db.patch(args.calendarId, update);
   },
 });
@@ -84,7 +124,7 @@ export const syncEventsToDb = internalMutation({
         htmlLink: v.optional(v.string()),
         updated: v.string(),
         meetingLink: v.optional(v.string()),
-      })
+      }),
     ),
   },
   handler: async (ctx, args) => {
@@ -176,12 +216,10 @@ export const listEvents = query({
           calendarName: calendar?.calendarName || 'Unknown',
           calendarEmail: calendar?.email || 'Unknown',
         };
-      })
+      }),
     );
 
-    return eventsWithCalendars.sort((a, b) => 
-      new Date(a.startTime).getTime() - new Date(b.startTime).getTime()
-    );
+    return eventsWithCalendars.sort((a, b) => new Date(a.startTime).getTime() - new Date(b.startTime).getTime());
   },
 });
 
@@ -210,13 +248,13 @@ export const getUpcomingEvents = query({
     const upcomingEvents = allEvents.filter((event) => {
       const eventStart = new Date(event.startTime);
       const eventEnd = event.endTime ? new Date(event.endTime) : null;
-      
+
       // Event must be today
       const isToday = eventStart >= today && eventStart < tomorrow;
-      
+
       // Event is upcoming (hasn't started yet) or currently happening (started but not ended)
       const isUpcomingOrCurrent = eventStart >= now || (eventStart < now && eventEnd && eventEnd > now);
-      
+
       return isToday && isUpcomingOrCurrent;
     });
 
@@ -229,12 +267,10 @@ export const getUpcomingEvents = query({
           calendarName: calendar?.calendarName || 'Unknown',
           calendarEmail: calendar?.email || 'Unknown',
         };
-      })
+      }),
     );
 
-    return eventsWithCalendars.sort((a, b) => 
-      new Date(a.startTime).getTime() - new Date(b.startTime).getTime()
-    );
+    return eventsWithCalendars.sort((a, b) => new Date(a.startTime).getTime() - new Date(b.startTime).getTime());
   },
 });
 
@@ -263,13 +299,13 @@ export const getPastEvents = query({
     const pastEvents = allEvents.filter((event) => {
       const eventStart = new Date(event.startTime);
       const eventEnd = event.endTime ? new Date(event.endTime) : null;
-      
+
       // Event must be today
       const isToday = eventStart >= today && eventStart < tomorrow;
-      
+
       // Event has ended (end time is in the past, or if no end time, start time is in the past)
       const hasEnded = eventEnd ? eventEnd < now : eventStart < now;
-      
+
       return isToday && hasEnded;
     });
 
@@ -282,7 +318,7 @@ export const getPastEvents = query({
           calendarName: calendar?.calendarName || 'Unknown',
           calendarEmail: calendar?.email || 'Unknown',
         };
-      })
+      }),
     );
 
     // Sort by most recent first
@@ -311,11 +347,9 @@ export const getEventsNeedingBots = internalQuery({
   },
   handler: async (ctx, args) => {
     const now = new Date(args.currentTime);
-    
+
     // Get all events with notetaker requested
-    const allEvents = await ctx.db
-      .query('events')
-      .collect();
+    const allEvents = await ctx.db.query('events').collect();
 
     return allEvents.filter((event) => {
       const eventStart = new Date(event.startTime);
@@ -331,21 +365,20 @@ export const getEndedEventsWithMeetingBaasBots = internalQuery({
   },
   handler: async (ctx, args) => {
     const now = new Date(args.currentTime);
-    
+
     // Get all events with Meeting BaaS bots
     const allEvents = await ctx.db
       .query('events')
-      .collect();
+      .filter((q) =>
+        q.and(
+          q.lte('endTime', now.toISOString()),
+          q.neq('meetingBaasBotId', undefined),
+          q.eq('meetingBaasTranscription', undefined),
+        ),
+      )
+      .take(10);
 
-    return allEvents.filter((event) => {
-      const eventEnd = new Date(event.endTime);
-      // Event has ended, has Meeting BaaS bot, but no transcription yet
-      return (
-        eventEnd <= now &&
-        event.meetingBaasBotId !== undefined &&
-        event.meetingBaasTranscription === undefined
-      );
-    });
+    return allEvents;
   },
 });
 
@@ -406,4 +439,3 @@ export const toggleNotetakerRequest = mutation({
     return { success: true };
   },
 });
-
