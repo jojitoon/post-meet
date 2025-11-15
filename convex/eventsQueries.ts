@@ -2,16 +2,39 @@ import { v } from 'convex/values';
 import { query, mutation, internalMutation, internalQuery } from './_generated/server';
 import { internal } from './_generated/api';
 
+// Internal mutation to update event bot information
+export const updateEventBotInfo = internalMutation({
+  args: {
+    eventId: v.id('events'),
+    botId: v.string(),
+    botStatus: v.string(),
+  },
+  handler: async (ctx, args) => {
+    await ctx.db.patch(args.eventId, {
+      botId: args.botId,
+      botStatus: args.botStatus,
+    });
+  },
+});
+
 // Internal mutation to update calendar token
 export const updateCalendarToken = internalMutation({
   args: {
     calendarId: v.id('calendars'),
     accessToken: v.string(),
+    refreshToken: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
-    await ctx.db.patch(args.calendarId, {
+    const update: { accessToken: string; refreshToken?: string } = {
       accessToken: args.accessToken,
-    });
+    };
+    
+    // Only update refresh token if provided (Google sometimes doesn't return a new one)
+    if (args.refreshToken) {
+      update.refreshToken = args.refreshToken;
+    }
+    
+    await ctx.db.patch(args.calendarId, update);
   },
 });
 
@@ -105,7 +128,7 @@ export const listEvents = query({
   handler: async (ctx, args) => {
     const identity = await ctx.auth.getUserIdentity();
     if (!identity) {
-      throw new Error('Not authenticated');
+      return [];
     }
 
     const limit = args.limit || 100;
@@ -140,7 +163,7 @@ export const getUpcomingEvents = query({
   handler: async (ctx) => {
     const identity = await ctx.auth.getUserIdentity();
     if (!identity) {
-      throw new Error('Not authenticated');
+      return [];
     }
 
     const now = new Date();
@@ -193,7 +216,7 @@ export const getPastEvents = query({
   handler: async (ctx) => {
     const identity = await ctx.auth.getUserIdentity();
     if (!identity) {
-      throw new Error('Not authenticated');
+      return [];
     }
 
     const now = new Date();

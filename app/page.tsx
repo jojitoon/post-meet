@@ -7,10 +7,11 @@ import { useAuth } from '@workos-inc/authkit-nextjs/components';
 import type { User } from '@workos-inc/node';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Calendar as CalendarIcon, Clock, Video, MapPin, Users, ExternalLink, Bot } from 'lucide-react';
+import { Calendar as CalendarIcon, Clock, Video, MapPin, Users, ExternalLink, Bot, RefreshCw } from 'lucide-react';
 import { Switch } from '@/components/ui/switch';
+import { Button } from '@/components/ui/button';
 import { useState } from 'react';
-import { sendBotToMeeting } from '@/convex/recall';
+import { detectMeetingPlatform, getPlatformName, type MeetingPlatform } from '@/app/utils/meetingPlatform';
 
 export default function Home() {
   const { user, signOut } = useAuth();
@@ -53,8 +54,12 @@ function SignInForm() {
 function Content() {
   const upcomingEvents = useQuery(api.eventsQueries.getUpcomingEvents);
   const pastEvents = useQuery(api.eventsQueries.getPastEvents);
+  const calendars = useQuery(api.calendars.listCalendars);
   const toggleNotetakerRequest = useMutation(api.eventsQueries.toggleNotetakerRequest);
-  const sendBotToMeetingMutation = useMutation(api.recall.sendBotToMeetingManually);
+  const refreshCalendarEvents = useMutation(api.eventsQueries.refreshCalendarEvents);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const sendBotToMeetingMutation = useMutation((api as any).recall.sendBotToMeetingManually);
+  const [isRefreshing, setIsRefreshing] = useState(false);
   const [selectedEvent, setSelectedEvent] = useState<{
     _id: string;
     title: string;
@@ -81,15 +86,51 @@ function Content() {
     }
   };
 
+  const handleRefresh = async () => {
+    if (!calendars || calendars.length === 0) {
+      return;
+    }
+
+    setIsRefreshing(true);
+    try {
+      // Refresh all calendars
+      await Promise.all(
+        calendars.map((calendar) =>
+          refreshCalendarEvents({
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            calendarId: calendar._id as any,
+          }),
+        ),
+      );
+    } catch (error) {
+      console.error('Failed to refresh calendars:', error);
+    } finally {
+      // Keep loading state for a bit to show feedback
+      setTimeout(() => setIsRefreshing(false), 1000);
+    }
+  };
+
   return (
-    <div className="flex flex-col gap-8 max-w-6xl mx-auto">
+    <div className="flex flex-col gap-8 max-w-4xl mx-auto w-full">
       {/* Upcoming Events */}
       <Card>
         <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <CalendarIcon className="h-5 w-5" />
-            Upcoming Events
-          </CardTitle>
+          <div className="flex items-center justify-between">
+            <CardTitle className="flex items-center gap-2">
+              <CalendarIcon className="h-5 w-5" />
+              Upcoming Events
+            </CardTitle>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleRefresh}
+              disabled={isRefreshing || !calendars || calendars.length === 0}
+              className="gap-2"
+            >
+              <RefreshCw className={`h-4 w-4 ${isRefreshing ? 'animate-spin' : ''}`} />
+              Refresh
+            </Button>
+          </div>
         </CardHeader>
         <CardContent>
           {upcomingEvents === undefined ? (
@@ -206,6 +247,34 @@ function EventCard({
     });
   };
 
+  const platform = detectMeetingPlatform(event.meetingLink);
+  const platformName = getPlatformName(platform);
+
+  const PlatformIcon = ({ platform }: { platform: MeetingPlatform }) => {
+    switch (platform) {
+      case 'zoom':
+        return (
+          <div className="h-4 w-4 rounded bg-blue-500 flex items-center justify-center text-white text-[10px] font-bold">
+            Z
+          </div>
+        );
+      case 'google-meet':
+        return (
+          <div className="h-4 w-4 rounded bg-green-500 flex items-center justify-center text-white text-[10px] font-bold">
+            G
+          </div>
+        );
+      case 'microsoft-teams':
+        return (
+          <div className="h-4 w-4 rounded bg-purple-500 flex items-center justify-center text-white text-[10px] font-bold">
+            T
+          </div>
+        );
+      default:
+        return <Video className="h-4 w-4" />;
+    }
+  };
+
   return (
     <div
       className={`p-4 border rounded-lg cursor-pointer transition-colors hover:bg-accent ${isPast ? 'opacity-75 bg-muted/30' : isCurrentlyHappening ? 'bg-primary/10 border-primary' : 'bg-accent/50 border-primary/20'}`}
@@ -215,7 +284,8 @@ function EventCard({
         <div className="flex-1">
           <div className="flex items-start justify-between mb-2">
             <div className="flex-1">
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 flex-wrap">
+                {/* {event.meetingLink && <PlatformIcon platform={platform} />} */}
                 <h3 className="font-semibold text-lg">{event.title}</h3>
                 {isCurrentlyHappening && (
                   <span className="inline-flex items-center gap-1 text-xs bg-primary text-primary-foreground px-2 py-0.5 rounded animate-pulse">
@@ -243,7 +313,7 @@ function EventCard({
           </div>
           <div className="space-y-1 text-sm text-muted-foreground">
             <div className="flex items-center gap-2">
-              <Clock className="h-4 w-4" />
+              <Clock className="h-4 w-4 shrink-0" />
               <span>
                 {formatDate(event.startTime)} • {formatTime(event.startTime)}
                 {event.endTime && ` - ${formatTime(event.endTime)}`}
@@ -251,34 +321,47 @@ function EventCard({
             </div>
             {event.meetingLink && (
               <div className="flex items-center gap-2">
-                <Video className="h-4 w-4" />
+                <PlatformIcon platform={platform} />
                 <a
                   href={event.meetingLink}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="text-primary hover:underline"
+                  onClick={(e) => e.stopPropagation()}
                 >
-                  {event.meetingLink.includes('zoom') ? 'Join Zoom Meeting' : 'Join Google Meet'}
+                  Join {platformName}
                 </a>
+              </div>
+            )}
+            {event.attendees && event.attendees.length > 0 && (
+              <div className="flex items-start gap-2">
+                <Users className="h-4 w-4 shrink-0 mt-0.5" />
+                <div className="flex-1">
+                  <div className="font-medium text-foreground mb-1">
+                    {event.attendees.length} Attendee{event.attendees.length !== 1 ? 's' : ''}
+                  </div>
+                  <div className="text-xs space-y-0.5">
+                    {event.attendees.slice(0, 3).map((attendee, index) => (
+                      <div key={index} className="truncate">
+                        {attendee}
+                      </div>
+                    ))}
+                    {event.attendees.length > 3 && (
+                      <div className="text-muted-foreground">+{event.attendees.length - 3} more</div>
+                    )}
+                  </div>
+                </div>
               </div>
             )}
             {event.location && (
               <div className="flex items-center gap-2">
-                <MapPin className="h-4 w-4" />
+                <MapPin className="h-4 w-4 shrink-0" />
                 <span>{event.location}</span>
-              </div>
-            )}
-            {event.attendees && event.attendees.length > 0 && (
-              <div className="flex items-center gap-2">
-                <Users className="h-4 w-4" />
-                <span>
-                  {event.attendees.length} attendee{event.attendees.length !== 1 ? 's' : ''}
-                </span>
               </div>
             )}
             {event.calendarName && (
               <div className="flex items-center gap-2">
-                <CalendarIcon className="h-4 w-4" />
+                <CalendarIcon className="h-4 w-4 shrink-0" />
                 <span>{event.calendarName}</span>
               </div>
             )}
@@ -293,6 +376,7 @@ function EventDetailsModal({
   event,
   onClose,
   onToggleNotetaker,
+  sendBotToMeeting,
 }: {
   event: {
     _id: string;
@@ -345,8 +429,8 @@ function EventDetailsModal({
     setIsSendingBot(true);
     try {
       await sendBotToMeeting({
-        // @ts-expect-error - eventId is a string from the query result
-        eventId: event._id,
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        eventId: event._id as any,
       });
       alert('Notetaker bot will join the meeting at the scheduled time!');
     } catch (error) {

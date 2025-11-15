@@ -22,6 +22,7 @@ import {
 } from 'lucide-react';
 import { useState } from 'react';
 import { Switch } from '@/components/ui/switch';
+import { detectMeetingPlatform, getPlatformName, type MeetingPlatform } from '@/app/utils/meetingPlatform';
 
 export default function EventsPage() {
   const { user, signOut } = useAuth();
@@ -33,12 +34,12 @@ export default function EventsPage() {
           <Link href="/" className="text-lg font-semibold hover:underline">
             Post Meet
           </Link>
-          <Link href="/settings" className="text-sm hover:underline">
-            Settings
-          </Link>
         </div>
         {user && (
           <div className="flex items-center gap-2">
+            <Link href="/settings" className="text-sm hover:underline">
+              Settings
+            </Link>
             <span className="text-sm">{user.email}</span>
             <button
               onClick={() => {
@@ -373,6 +374,9 @@ function EventCard({
   onCardClick?: () => void;
 }) {
   const calendar = calendars.find((c) => c._id === event.calendarId);
+  const platform = detectMeetingPlatform(event.meetingLink);
+  const platformName = getPlatformName(platform);
+
   const formatTime = (dateString: string) => {
     const date = new Date(dateString);
     if (dateString.includes('T')) {
@@ -384,6 +388,40 @@ function EventCard({
     return 'All Day';
   };
 
+  const PlatformIcon = ({ platform, size = 'sm' }: { platform: MeetingPlatform; size?: 'sm' | 'md' }) => {
+    const iconSize = size === 'sm' ? 'h-3 w-3' : 'h-4 w-4';
+    const textSize = size === 'sm' ? 'text-[8px]' : 'text-[10px]';
+
+    switch (platform) {
+      case 'zoom':
+        return (
+          <div
+            className={`${iconSize} rounded bg-blue-500 flex items-center justify-center text-white ${textSize} font-bold`}
+          >
+            Z
+          </div>
+        );
+      case 'google-meet':
+        return (
+          <div
+            className={`${iconSize} rounded bg-green-500 flex items-center justify-center text-white ${textSize} font-bold`}
+          >
+            G
+          </div>
+        );
+      case 'microsoft-teams':
+        return (
+          <div
+            className={`${iconSize} rounded bg-purple-500 flex items-center justify-center text-white ${textSize} font-bold`}
+          >
+            T
+          </div>
+        );
+      default:
+        return <Video className={iconSize} />;
+    }
+  };
+
   return (
     <Card
       className="p-2 hover:bg-accent transition-colors border-primary/20 cursor-pointer"
@@ -393,7 +431,10 @@ function EventCard({
         <div className="space-y-2">
           <div className="flex items-start justify-between gap-2">
             <div className="flex-1 min-w-0">
-              <h4 className="text-xs font-semibold line-clamp-2 mb-1">{event.title}</h4>
+              <div className="flex items-center gap-1.5 mb-1">
+                {/* {event.meetingLink && <PlatformIcon platform={platform} size="sm" />} */}
+                <h4 className="text-xs font-semibold line-clamp-2">{event.title}</h4>
+              </div>
               {event.notetakerRequested && (
                 <span className="inline-flex items-center gap-1 text-xs bg-primary/10 text-primary px-1.5 py-0.5 rounded">
                   <span>✓</span>
@@ -417,7 +458,7 @@ function EventCard({
             </div>
             {event.meetingLink && (
               <div className="flex items-center gap-1">
-                <Video className="h-3 w-3 shrink-0" />
+                <PlatformIcon platform={platform} size="sm" />
                 <a
                   href={event.meetingLink}
                   target="_blank"
@@ -425,22 +466,34 @@ function EventCard({
                   className="text-primary hover:underline truncate"
                   onClick={(e) => e.stopPropagation()}
                 >
-                  {event.meetingLink.includes('zoom') ? 'Join Zoom' : 'Join Meet'}
+                  Join {platformName}
                 </a>
+              </div>
+            )}
+            {event.attendees && event.attendees.length > 0 && (
+              <div className="flex items-start gap-1">
+                <Users className="h-3 w-3 shrink-0 mt-0.5" />
+                <div className="flex-1 min-w-0">
+                  <div className="font-medium text-foreground">
+                    {event.attendees.length} attendee{event.attendees.length !== 1 ? 's' : ''}
+                  </div>
+                  <div className="text-[10px] space-y-0.5 mt-0.5">
+                    {event.attendees.slice(0, 2).map((attendee, index) => (
+                      <div key={index} className="truncate">
+                        {attendee}
+                      </div>
+                    ))}
+                    {event.attendees.length > 2 && (
+                      <div className="text-muted-foreground">+{event.attendees.length - 2} more</div>
+                    )}
+                  </div>
+                </div>
               </div>
             )}
             {event.location && (
               <div className="flex items-center gap-1">
                 <MapPin className="h-3 w-3 shrink-0" />
                 <span className="truncate">{event.location}</span>
-              </div>
-            )}
-            {event.attendees && event.attendees.length > 0 && (
-              <div className="flex items-center gap-1">
-                <Users className="h-3 w-3 shrink-0" />
-                <span>
-                  {event.attendees.length} attendee{event.attendees.length !== 1 ? 's' : ''}
-                </span>
               </div>
             )}
             {calendar && (
@@ -589,18 +642,40 @@ function EventDetailsModal({
 
             {event.meetingLink && (
               <div className="flex items-start gap-3">
-                <Video className="h-5 w-5 text-muted-foreground shrink-0 mt-0.5" />
-                <div>
-                  <p className="font-medium">Meeting Link</p>
-                  <a
-                    href={event.meetingLink}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-sm text-primary hover:underline"
-                  >
-                    {event.meetingLink.includes('zoom') ? 'Join Zoom Meeting' : 'Join Google Meet'}
-                  </a>
-                </div>
+                {(() => {
+                  const platform = detectMeetingPlatform(event.meetingLink);
+                  const platformName = getPlatformName(platform);
+                  return (
+                    <>
+                      {platform === 'zoom' ? (
+                        <div className="h-5 w-5 rounded bg-blue-500 flex items-center justify-center text-white text-xs font-bold shrink-0 mt-0.5">
+                          Z
+                        </div>
+                      ) : platform === 'google-meet' ? (
+                        <div className="h-5 w-5 rounded bg-green-500 flex items-center justify-center text-white text-xs font-bold shrink-0 mt-0.5">
+                          G
+                        </div>
+                      ) : platform === 'microsoft-teams' ? (
+                        <div className="h-5 w-5 rounded bg-purple-500 flex items-center justify-center text-white text-xs font-bold shrink-0 mt-0.5">
+                          T
+                        </div>
+                      ) : (
+                        <Video className="h-5 w-5 text-muted-foreground shrink-0 mt-0.5" />
+                      )}
+                      <div>
+                        <p className="font-medium">Meeting Link</p>
+                        <a
+                          href={event.meetingLink}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-sm text-primary hover:underline"
+                        >
+                          Join {platformName}
+                        </a>
+                      </div>
+                    </>
+                  );
+                })()}
               </div>
             )}
 

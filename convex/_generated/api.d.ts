@@ -9,10 +9,13 @@
  */
 
 import type * as calendars from "../calendars.js";
+import type * as crons from "../crons.js";
 import type * as events from "../events.js";
 import type * as eventsQueries from "../eventsQueries.js";
 import type * as http from "../http.js";
 import type * as myFunctions from "../myFunctions.js";
+import type * as recall from "../recall.js";
+import type * as userSettings from "../userSettings.js";
 
 import type {
   ApiFromModules,
@@ -22,10 +25,13 @@ import type {
 
 declare const fullApi: ApiFromModules<{
   calendars: typeof calendars;
+  crons: typeof crons;
   events: typeof events;
   eventsQueries: typeof eventsQueries;
   http: typeof http;
   myFunctions: typeof myFunctions;
+  recall: typeof recall;
+  userSettings: typeof userSettings;
 }>;
 
 /**

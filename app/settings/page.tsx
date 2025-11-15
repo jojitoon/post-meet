@@ -20,10 +20,8 @@ export default function SettingsPage() {
 
   const calendars = useQuery(api.calendars.listCalendars);
   const removeCalendar = useMutation(api.calendars.removeCalendar);
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const userSettings = useQuery((api as any).recall.getUserSettings);
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const updateUserSettings = useMutation((api as any).recall.updateUserSettings);
+  const userSettings = useQuery(api.userSettings.getUserSettings);
+  const updateUserSettings = useMutation(api.userSettings.updateUserSettings);
   const [botJoinMinutes, setBotJoinMinutes] = useState<number>(5);
   const [isSavingSettings, setIsSavingSettings] = useState(false);
 

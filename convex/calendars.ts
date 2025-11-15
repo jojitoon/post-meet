@@ -8,7 +8,7 @@ export const listCalendars = query({
   handler: async (ctx) => {
     const identity = await ctx.auth.getUserIdentity();
     if (!identity) {
-      throw new Error('Not authenticated');
+      return [];
     }
 
     const calendars = await ctx.db
@@ -96,6 +96,19 @@ export const removeCalendar = mutation({
       throw new Error('Not authorized to delete this calendar');
     }
 
+    // Delete all events associated with this calendar
+    const events = await ctx.db
+      .query('events')
+      .withIndex('by_calendar', (q) => q.eq('calendarId', args.calendarId))
+      .collect();
+
+    for (const event of events) {
+      await ctx.db.delete(event._id);
+    }
+
+    console.log(`Deleted ${events.length} events for calendar ${calendar.calendarName}`);
+
+    // Delete the calendar
     await ctx.db.delete(args.calendarId);
   },
 });
@@ -142,4 +155,3 @@ export const getCalendarData = internalMutation({
     };
   },
 });
-
