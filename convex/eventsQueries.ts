@@ -13,6 +13,34 @@ export const updateEventBotInfo = internalMutation({
     await ctx.db.patch(args.eventId, {
       botId: args.botId,
       botStatus: args.botStatus,
+      botProvider: 'recall', // Set provider when using Recall.ai
+    });
+  },
+});
+
+// Internal mutation to update Meeting BaaS bot information
+export const updateMeetingBaasBotInfo = internalMutation({
+  args: {
+    eventId: v.id('events'),
+    botId: v.string(),
+  },
+  handler: async (ctx, args) => {
+    await ctx.db.patch(args.eventId, {
+      meetingBaasBotId: args.botId,
+      botProvider: 'meeting_baas',
+    });
+  },
+});
+
+// Internal mutation to update Meeting BaaS transcription
+export const updateMeetingBaasTranscription = internalMutation({
+  args: {
+    eventId: v.id('events'),
+    transcription: v.optional(v.string()),
+  },
+  handler: async (ctx, args) => {
+    await ctx.db.patch(args.eventId, {
+      meetingBaasTranscription: args.transcription,
     });
   },
 });
@@ -292,6 +320,31 @@ export const getEventsNeedingBots = internalQuery({
     return allEvents.filter((event) => {
       const eventStart = new Date(event.startTime);
       return eventStart > now && event.notetakerRequested === true;
+    });
+  },
+});
+
+// Internal query to get ended events with Meeting BaaS bots that need transcription
+export const getEndedEventsWithMeetingBaasBots = internalQuery({
+  args: {
+    currentTime: v.string(),
+  },
+  handler: async (ctx, args) => {
+    const now = new Date(args.currentTime);
+    
+    // Get all events with Meeting BaaS bots
+    const allEvents = await ctx.db
+      .query('events')
+      .collect();
+
+    return allEvents.filter((event) => {
+      const eventEnd = new Date(event.endTime);
+      // Event has ended, has Meeting BaaS bot, but no transcription yet
+      return (
+        eventEnd <= now &&
+        event.meetingBaasBotId !== undefined &&
+        event.meetingBaasTranscription === undefined
+      );
     });
   },
 });

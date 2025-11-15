@@ -35,6 +35,9 @@ export default defineSchema({
     meetingLink: v.optional(v.string()),
     botId: v.optional(v.string()), // Recall.ai bot ID
     botStatus: v.optional(v.string()), // Recall.ai bot status
+    meetingBaasBotId: v.optional(v.string()), // Meeting BaaS bot ID
+    meetingBaasTranscription: v.optional(v.string()), // Meeting BaaS transcription data
+    botProvider: v.optional(v.string()), // 'recall' or 'meeting_baas'
   })
     .index('by_calendar', ['calendarId'])
     .index('by_user', ['userId'])

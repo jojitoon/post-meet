@@ -1,6 +1,6 @@
 'use client';
 
-import { Authenticated, Unauthenticated, useMutation, useQuery } from 'convex/react';
+import { Authenticated, Unauthenticated, useMutation, useQuery, useAction } from 'convex/react';
 import { api } from '../convex/_generated/api';
 import Link from 'next/link';
 import { useAuth } from '@workos-inc/authkit-nextjs/components';
@@ -14,16 +14,9 @@ import { useState } from 'react';
 import { detectMeetingPlatform, getPlatformName, type MeetingPlatform } from '@/app/utils/meetingPlatform';
 
 export default function Home() {
-  const { user, signOut } = useAuth();
-
   return (
     <>
-      <header className="sticky top-0 z-10 bg-background p-4 border-b-2 border-slate-200 dark:border-slate-800 flex flex-row justify-between items-center">
-        <Link href="/" className="text-lg font-semibold hover:underline">
-          Post Meet
-        </Link>
-        {user && <UserMenu user={user} onSignOut={signOut} />}
-      </header>
+      <Header />
       <main className="p-8 flex flex-col gap-8">
         {/* <h1 className="text-4xl font-bold text-center">Convex + Next.js + WorkOS</h1> */}
         <Authenticated>
@@ -34,6 +27,19 @@ export default function Home() {
         </Unauthenticated>
       </main>
     </>
+  );
+}
+
+function Header() {
+  const { user, signOut } = useAuth();
+
+  return (
+    <header className="sticky top-0 z-10 bg-background p-4 border-b-2 border-slate-200 dark:border-slate-800 flex flex-row justify-between items-center">
+      <Link href="/" className="text-lg font-semibold hover:underline">
+        Post Meet
+      </Link>
+      {user && <UserMenu user={user} onSignOut={signOut} />}
+    </header>
   );
 }
 
@@ -58,7 +64,7 @@ function Content() {
   const toggleNotetakerRequest = useMutation(api.eventsQueries.toggleNotetakerRequest);
   const refreshCalendarEvents = useMutation(api.eventsQueries.refreshCalendarEvents);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const sendBotToMeetingMutation = useMutation((api as any).recall.sendBotToMeetingManually);
+  const sendBotToMeetingAction = useAction((api as any).botService.sendBotToMeetingManually);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [selectedEvent, setSelectedEvent] = useState<{
     _id: string;
@@ -199,7 +205,7 @@ function Content() {
         event={selectedEvent}
         onClose={() => setSelectedEvent(null)}
         onToggleNotetaker={handleToggleNotetaker}
-        sendBotToMeeting={sendBotToMeetingMutation}
+        sendBotToMeeting={sendBotToMeetingAction}
       />
     </div>
   );

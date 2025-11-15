@@ -8,11 +8,13 @@
  * @module
  */
 
+import type * as botService from "../botService.js";
 import type * as calendars from "../calendars.js";
 import type * as crons from "../crons.js";
 import type * as events from "../events.js";
 import type * as eventsQueries from "../eventsQueries.js";
 import type * as http from "../http.js";
+import type * as meetingBaas from "../meetingBaas.js";
 import type * as myFunctions from "../myFunctions.js";
 import type * as recall from "../recall.js";
 import type * as userSettings from "../userSettings.js";
@@ -24,11 +26,13 @@ import type {
 } from "convex/server";
 
 declare const fullApi: ApiFromModules<{
+  botService: typeof botService;
   calendars: typeof calendars;
   crons: typeof crons;
   events: typeof events;
   eventsQueries: typeof eventsQueries;
   http: typeof http;
+  meetingBaas: typeof meetingBaas;
   myFunctions: typeof myFunctions;
   recall: typeof recall;
   userSettings: typeof userSettings;

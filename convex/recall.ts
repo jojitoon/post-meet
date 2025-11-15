@@ -1,14 +1,18 @@
 'use node';
 
 import { v } from 'convex/values';
-import { internalAction } from './_generated/server';
+import { internalAction, action } from './_generated/server';
 import { internal } from './_generated/api';
 
 const RECALL_API_REGION = process.env.RECALL_API_REGION || 'us-west-2';
 const RECALL_API_KEY = process.env.RECALL_API_KEY;
 
 // Helper function to create a bot (can be called from actions)
-async function createBotHelper(meetingUrl: string, botName?: string) {
+async function createBotHelper(
+  meetingUrl: string,
+  botName?: string,
+  transcriptionMode: 'prioritize_accuracy' | 'prioritize_low_latency' = 'prioritize_accuracy',
+) {
   if (!RECALL_API_KEY) {
     throw new Error('RECALL_API_KEY is not set');
   }
@@ -16,7 +20,7 @@ async function createBotHelper(meetingUrl: string, botName?: string) {
   const response = await fetch(`https://${RECALL_API_REGION}.recall.ai/api/v1/bot`, {
     method: 'POST',
     headers: {
-      'Authorization': `Token ${RECALL_API_KEY}`,
+      Authorization: `Token ${RECALL_API_KEY}`,
       'Content-Type': 'application/json',
     },
     body: JSON.stringify({
@@ -25,7 +29,9 @@ async function createBotHelper(meetingUrl: string, botName?: string) {
       recording_config: {
         transcript: {
           provider: {
-            meeting_captions: {},
+            recallai_streaming: {
+              mode: transcriptionMode,
+            },
           },
         },
       },
@@ -66,10 +72,15 @@ export const createBot = internalAction({
     eventId: v.id('events'),
     meetingUrl: v.string(),
     botName: v.optional(v.string()),
+    transcriptionMode: v.optional(v.union(v.literal('prioritize_accuracy'), v.literal('prioritize_low_latency'))),
   },
   handler: async (ctx, args) => {
     try {
-      const botData = await createBotHelper(args.meetingUrl, args.botName);
+      const botData = await createBotHelper(
+        args.meetingUrl,
+        args.botName,
+        args.transcriptionMode || 'prioritize_accuracy',
+      );
 
       // Update event with bot ID
       await ctx.runMutation(internal.eventsQueries.updateEventBotInfo, {
@@ -135,14 +146,47 @@ export const sendBotToMeeting = internalAction({
       return botStatus;
     }
 
-    // Create new bot
-    const botData = await createBotHelper(event.meetingLink, `Notetaker for ${event.title}`);
+    // Create new bot with transcription enabled (default to prioritize_accuracy for best quality)
+    const botData = await createBotHelper(event.meetingLink, `Notetaker for ${event.title}`, 'prioritize_accuracy');
     await ctx.runMutation(internal.eventsQueries.updateEventBotInfo, {
       eventId: args.eventId,
       botId: botData.id,
       botStatus: botData.status || 'pending',
     });
     return botData;
+  },
+});
+
+// Public action to manually send bot to meeting (called from UI)
+export const sendBotToMeetingManually = action({
+  args: {
+    eventId: v.id('events'),
+  },
+  handler: async (ctx, args) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) {
+      throw new Error('Not authenticated');
+    }
+
+    // Get event to verify ownership
+    const event = await ctx.runQuery(internal.eventsQueries.getEventById, {
+      eventId: args.eventId,
+    });
+
+    if (!event) {
+      throw new Error('Event not found');
+    }
+
+    if (event.userId !== identity.subject) {
+      throw new Error('Not authorized to send bot for this event');
+    }
+
+    // Trigger the internal action to send the bot
+    await ctx.scheduler.runAfter(0, internal.recall.sendBotToMeeting, {
+      eventId: args.eventId,
+    });
+
+    return { success: true };
   },
 });
 
@@ -159,6 +203,11 @@ export const checkAndSendBotsForUpcomingEvents = internalAction({
 
     for (const event of events) {
       try {
+        // Only process events that use Recall.ai (or don't have a provider set yet)
+        if (event.botProvider && event.botProvider !== 'recall') {
+          continue;
+        }
+
         // Get user settings for bot join time
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const settings = await ctx.runQuery((internal as any).userSettings.getUserSettingsForBot, {
@@ -173,14 +222,13 @@ export const checkAndSendBotsForUpcomingEvents = internalAction({
         if (now >= joinTime && now < eventStart) {
           // Check if bot hasn't been sent yet
           if (!event.botId) {
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            await ctx.runAction((internal as any).recall.sendBotToMeeting, {
+            await ctx.runAction(internal.recall.sendBotToMeeting, {
               eventId: event._id,
             });
           }
         }
       } catch (error) {
-        console.error(`Failed to process bot for event ${event._id}:`, error);
+        console.error(`Failed to process Recall.ai bot for event ${event._id}:`, error);
       }
     }
   },

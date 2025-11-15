@@ -1,6 +1,6 @@
 'use client';
 
-import { useQuery, useMutation, Authenticated, Unauthenticated } from 'convex/react';
+import { useQuery, useMutation, useAction, Authenticated, Unauthenticated } from 'convex/react';
 import { api } from '@/convex/_generated/api';
 import { useAuth } from '@workos-inc/authkit-nextjs/components';
 import { Button } from '@/components/ui/button';
@@ -80,7 +80,7 @@ function EventsContent() {
   const refreshCalendarEvents = useMutation(api.eventsQueries.refreshCalendarEvents);
   const toggleNotetakerRequest = useMutation(api.eventsQueries.toggleNotetakerRequest);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const sendBotToMeetingMutation = useMutation((api as any).recall.sendBotToMeetingManually);
+  const sendBotToMeetingAction = useAction((api as any).botService.sendBotToMeetingManually);
   const [selectedCalendarId, setSelectedCalendarId] = useState<string>('all');
   const [currentDate, setCurrentDate] = useState(new Date());
   const [isRefreshing, setIsRefreshing] = useState(false);
@@ -343,7 +343,7 @@ function EventsContent() {
           calendars={calendars || []}
           onClose={() => setSelectedEvent(null)}
           onToggleNotetaker={handleToggleNotetaker}
-          sendBotToMeeting={sendBotToMeetingMutation}
+          sendBotToMeeting={sendBotToMeetingAction}
         />
       )}
     </div>
