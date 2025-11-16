@@ -356,7 +356,13 @@ export const getEventByIdPublic = query({
       return null;
     }
 
-    return event;
+    // Get calendar info for the event
+    const calendar = await ctx.db.get(event.calendarId);
+    return {
+      ...event,
+      calendarName: calendar?.calendarName || 'Unknown',
+      calendarEmail: calendar?.email || 'Unknown',
+    };
   },
 });
 
