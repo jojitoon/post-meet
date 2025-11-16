@@ -4,6 +4,7 @@ import userEvent from '@testing-library/user-event';
 import EventsPage from '@/app/events/page';
 import { useQuery, useMutation, useAction } from 'convex/react';
 import { useAuth } from '@workos-inc/authkit-nextjs/components';
+import { api } from '@/convex/_generated/api';
 
 // Mock Convex hooks
 vi.mock('convex/react', () => ({
@@ -51,13 +52,13 @@ describe('Events Page', () => {
     } as any);
 
     vi.mocked(useQuery).mockImplementation((query) => {
-      if (query === 'api.eventsQueries.listEvents') {
+      if (query === api.eventsQueries.listEvents) {
         return [] as any;
       }
-      if (query === 'api.calendars.listCalendars') {
+      if (query === api.calendars.listCalendars) {
         return [] as any;
       }
-      return null;
+      return undefined;
     });
 
     render(<EventsPage />);
@@ -76,13 +77,13 @@ describe('Events Page', () => {
     } as any);
 
     vi.mocked(useQuery).mockImplementation((query) => {
-      if (query === 'api.eventsQueries.listEvents') {
+      if (query === api.eventsQueries.listEvents) {
         return [] as any;
       }
-      if (query === 'api.calendars.listCalendars') {
+      if (query === api.calendars.listCalendars) {
         return [] as any;
       }
-      return null;
+      return undefined;
     });
 
     render(<EventsPage />);
@@ -129,13 +130,13 @@ describe('Events Page', () => {
     ];
 
     vi.mocked(useQuery).mockImplementation((query) => {
-      if (query === 'api.eventsQueries.listEvents') {
+      if (query === api.eventsQueries.listEvents) {
         return mockEvents as any;
       }
-      if (query === 'api.calendars.listCalendars') {
+      if (query === api.calendars.listCalendars) {
         return [{ _id: 'cal_1', calendarName: 'Test Calendar' }] as any;
       }
-      return null;
+      return undefined;
     });
 
     render(<EventsPage />);
@@ -155,13 +156,13 @@ describe('Events Page', () => {
     } as any);
 
     vi.mocked(useQuery).mockImplementation((query) => {
-      if (query === 'api.eventsQueries.listEvents') {
+      if (query === api.eventsQueries.listEvents) {
         return [] as any;
       }
-      if (query === 'api.calendars.listCalendars') {
+      if (query === api.calendars.listCalendars) {
         return [] as any;
       }
-      return null;
+      return undefined;
     });
 
     render(<EventsPage />);
@@ -195,13 +196,13 @@ describe('Events Page', () => {
     ];
 
     vi.mocked(useQuery).mockImplementation((query) => {
-      if (query === 'api.eventsQueries.listEvents') {
+      if (query === api.eventsQueries.listEvents) {
         return mockEvents as any;
       }
-      if (query === 'api.calendars.listCalendars') {
+      if (query === api.calendars.listCalendars) {
         return [{ _id: 'cal_1', calendarName: 'Test Calendar' }] as any;
       }
-      return null;
+      return undefined;
     });
 
     render(<EventsPage />);
@@ -223,13 +224,13 @@ describe('Events Page', () => {
     } as any);
 
     vi.mocked(useQuery).mockImplementation((query) => {
-      if (query === 'api.eventsQueries.listEvents') {
+      if (query === api.eventsQueries.listEvents) {
         return [] as any;
       }
-      if (query === 'api.calendars.listCalendars') {
+      if (query === api.calendars.listCalendars) {
         return [] as any;
       }
-      return null;
+      return undefined;
     });
 
     render(<EventsPage />);

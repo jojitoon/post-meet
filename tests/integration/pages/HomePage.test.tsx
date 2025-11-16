@@ -3,6 +3,7 @@ import { render, screen, waitFor } from '@testing-library/react';
 import Home from '@/app/page';
 import { useQuery, useMutation, useAction } from 'convex/react';
 import { useAuth } from '@workos-inc/authkit-nextjs/components';
+import { api } from '@/convex/_generated/api';
 
 // Mock Convex hooks
 vi.mock('convex/react', () => ({
@@ -63,16 +64,16 @@ describe('Home Page', () => {
     } as any);
 
     vi.mocked(useQuery).mockImplementation((query) => {
-      if (query === 'api.eventsQueries.getUpcomingEvents') {
+      if (query === api.eventsQueries.getUpcomingEvents) {
         return [] as any;
       }
-      if (query === 'api.eventsQueries.getPastEvents') {
+      if (query === api.eventsQueries.getPastEvents) {
         return [] as any;
       }
-      if (query === 'api.calendars.listCalendars') {
+      if (query === api.calendars.listCalendars) {
         return [] as any;
       }
-      return null;
+      return undefined;
     });
 
     render(<Home />);
@@ -101,16 +102,16 @@ describe('Home Page', () => {
     ];
 
     vi.mocked(useQuery).mockImplementation((query) => {
-      if (query === 'api.eventsQueries.getUpcomingEvents') {
+      if (query === api.eventsQueries.getUpcomingEvents) {
         return mockUpcomingEvents as any;
       }
-      if (query === 'api.eventsQueries.getPastEvents') {
+      if (query === api.eventsQueries.getPastEvents) {
         return [] as any;
       }
-      if (query === 'api.calendars.listCalendars') {
+      if (query === api.calendars.listCalendars) {
         return [] as any;
       }
-      return null;
+      return undefined;
     });
 
     render(<Home />);
@@ -168,16 +169,16 @@ describe('Home Page', () => {
     } as any);
 
     vi.mocked(useQuery).mockImplementation((query) => {
-      if (query === 'api.eventsQueries.getUpcomingEvents') {
+      if (query === api.eventsQueries.getUpcomingEvents) {
         return [] as any;
       }
-      if (query === 'api.eventsQueries.getPastEvents') {
+      if (query === api.eventsQueries.getPastEvents) {
         return [] as any;
       }
-      if (query === 'api.calendars.listCalendars') {
+      if (query === api.calendars.listCalendars) {
         return [] as any;
       }
-      return null;
+      return undefined;
     });
 
     render(<Home />);

@@ -2,13 +2,12 @@
 
 import { useQuery, useAction, useMutation } from 'convex/react';
 import { api } from '@/convex/_generated/api';
-import { useAuth } from '@workos-inc/authkit-nextjs/components';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Switch } from '@/components/ui/switch';
 import Link from 'next/link';
-import { useParams, useRouter } from 'next/navigation';
+import { useParams } from 'next/navigation';
 import { useState, useEffect } from 'react';
 import {
   FileText,
@@ -34,11 +33,13 @@ import { detectMeetingPlatform, getPlatformName } from '@/app/utils/meetingPlatf
 
 export default function MeetingDetailPage() {
   const params = useParams();
-  const router = useRouter();
   const eventId = params.eventId as string;
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const event = useQuery(api.eventsQueries.getEventByIdPublic, { eventId: eventId as any });
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const followUpEmail = useQuery(api.contentGenerationQueries.getFollowUpEmail, { eventId: eventId as any });
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const generatedPosts = useQuery(api.contentGenerationQueries.getGeneratedPosts, { eventId: eventId as any });
   const automations = useQuery(api.automations.getAutomations);
   const generateEmail = useAction(api.contentGeneration.generateFollowUpEmail);
@@ -70,7 +71,7 @@ export default function MeetingDetailPage() {
     if (event) {
       setNotetakerRequested(event.notetakerRequested || false);
     }
-  }, [event?.notetakerRequested]);
+  }, [event]);
 
   const handleGenerateEmail = async () => {
     if (!event?.meetingBaasTranscription) {
@@ -80,6 +81,7 @@ export default function MeetingDetailPage() {
 
     setIsGeneratingEmail(true);
     try {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       await generateEmail({
         eventId: eventId as any,
         transcription: event.meetingBaasTranscription,
@@ -101,8 +103,10 @@ export default function MeetingDetailPage() {
 
     setIsGeneratingPost((prev) => ({ ...prev, [automationId]: true }));
     try {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       await generatePost({
         eventId: eventId as any,
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         automationId: automationId as any,
         transcription: event.meetingBaasTranscription,
       });
@@ -124,11 +128,13 @@ export default function MeetingDetailPage() {
     setIsPosting((prev) => ({ ...prev, [post._id]: true }));
     try {
       if (post.platform === 'linkedin') {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         await postToLinkedIn({
           postId: post._id as any,
           content: post.content,
         });
       } else if (post.platform === 'facebook') {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         await postToFacebook({
           postId: post._id as any,
           content: post.content,
@@ -152,6 +158,7 @@ export default function MeetingDetailPage() {
 
     setIsSendingBot(true);
     try {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       await sendBotToMeeting({
         eventId: eventId as any,
       });
@@ -167,6 +174,7 @@ export default function MeetingDetailPage() {
   const handleRecallBot = async () => {
     setIsRecallingBot(true);
     try {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       await recallBot({
         eventId: eventId as any,
       });
@@ -184,6 +192,7 @@ export default function MeetingDetailPage() {
     setNotetakerRequested(checked);
 
     try {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       await toggleNotetakerRequest({
         eventId: eventId as any,
         notetakerRequested: checked,

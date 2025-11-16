@@ -103,12 +103,14 @@ export async function GET(request: NextRequest) {
       } else {
         console.warn('LinkedIn profile fetch failed:', await profileResponse.text());
       }
-    } catch (profileError: any) {
+    } catch (profileError: unknown) {
       // Handle timeout or other errors gracefully
-      if (profileError.name === 'AbortError') {
+      if (profileError instanceof Error && profileError.name === 'AbortError') {
         console.warn('LinkedIn profile fetch timed out - connection will still be saved');
-      } else {
+      } else if (profileError instanceof Error) {
         console.warn('LinkedIn profile fetch error:', profileError.message);
+      } else {
+        console.warn('LinkedIn profile fetch error:', String(profileError));
       }
       // Continue without profile info - connection will still be saved
     }

@@ -3,6 +3,7 @@ import { render, screen, waitFor } from '@testing-library/react';
 import MeetingDetailPage from '@/app/meetings/[eventId]/page';
 import { useQuery, useMutation, useAction } from 'convex/react';
 import { useAuth } from '@workos-inc/authkit-nextjs/components';
+import { api } from '@/convex/_generated/api';
 
 // Mock Convex hooks
 vi.mock('convex/react', () => ({
@@ -82,16 +83,19 @@ describe('Meeting Detail Page', () => {
     };
 
     vi.mocked(useQuery).mockImplementation((query) => {
-      if (query === 'api.eventsQueries.getEventByIdPublic') {
+      if (query === api.eventsQueries.getEventByIdPublic) {
         return mockEvent as any;
       }
-      if (query === 'api.contentGenerationQueries.getFollowUpEmail') {
+      if (query === api.contentGenerationQueries.getFollowUpEmail) {
         return null;
       }
-      if (query === 'api.contentGenerationQueries.getGeneratedPosts') {
+      if (query === api.contentGenerationQueries.getGeneratedPosts) {
         return [];
       }
-      return null;
+      if (query === api.automations.getAutomations) {
+        return [];
+      }
+      return undefined;
     });
 
     render(<MeetingDetailPage />);
@@ -125,16 +129,19 @@ describe('Meeting Detail Page', () => {
     };
 
     vi.mocked(useQuery).mockImplementation((query) => {
-      if (query === 'api.eventsQueries.getEventByIdPublic') {
+      if (query === api.eventsQueries.getEventByIdPublic) {
         return mockEvent as any;
       }
-      if (query === 'api.contentGenerationQueries.getFollowUpEmail') {
+      if (query === api.contentGenerationQueries.getFollowUpEmail) {
         return null;
       }
-      if (query === 'api.contentGenerationQueries.getGeneratedPosts') {
+      if (query === api.contentGenerationQueries.getGeneratedPosts) {
         return [];
       }
-      return null;
+      if (query === api.automations.getAutomations) {
+        return [];
+      }
+      return undefined;
     });
 
     render(<MeetingDetailPage />);
@@ -249,7 +256,21 @@ describe('Meeting Detail Page', () => {
       signOut: vi.fn(),
     } as any);
 
-    vi.mocked(useQuery).mockReturnValue(null);
+    vi.mocked(useQuery).mockImplementation((query) => {
+      if (query === api.eventsQueries.getEventByIdPublic) {
+        return null;
+      }
+      if (query === api.contentGenerationQueries.getFollowUpEmail) {
+        return null;
+      }
+      if (query === api.contentGenerationQueries.getGeneratedPosts) {
+        return [];
+      }
+      if (query === api.automations.getAutomations) {
+        return [];
+      }
+      return undefined;
+    });
 
     render(<MeetingDetailPage />);
 
@@ -281,16 +302,19 @@ describe('Meeting Detail Page', () => {
     };
 
     vi.mocked(useQuery).mockImplementation((query) => {
-      if (query === 'api.eventsQueries.getEventByIdPublic') {
+      if (query === api.eventsQueries.getEventByIdPublic) {
         return mockEvent as any;
       }
-      if (query === 'api.contentGenerationQueries.getFollowUpEmail') {
+      if (query === api.contentGenerationQueries.getFollowUpEmail) {
         return null;
       }
-      if (query === 'api.contentGenerationQueries.getGeneratedPosts') {
+      if (query === api.contentGenerationQueries.getGeneratedPosts) {
         return [];
       }
-      return null;
+      if (query === api.automations.getAutomations) {
+        return [];
+      }
+      return undefined;
     });
 
     render(<MeetingDetailPage />);
@@ -325,16 +349,19 @@ describe('Meeting Detail Page', () => {
     };
 
     vi.mocked(useQuery).mockImplementation((query) => {
-      if (query === 'api.eventsQueries.getEventByIdPublic') {
+      if (query === api.eventsQueries.getEventByIdPublic) {
         return mockEvent as any;
       }
-      if (query === 'api.contentGenerationQueries.getFollowUpEmail') {
+      if (query === api.contentGenerationQueries.getFollowUpEmail) {
         return null;
       }
-      if (query === 'api.contentGenerationQueries.getGeneratedPosts') {
+      if (query === api.contentGenerationQueries.getGeneratedPosts) {
         return [];
       }
-      return null;
+      if (query === api.automations.getAutomations) {
+        return [];
+      }
+      return undefined;
     });
 
     render(<MeetingDetailPage />);
@@ -367,16 +394,19 @@ describe('Meeting Detail Page', () => {
     };
 
     vi.mocked(useQuery).mockImplementation((query) => {
-      if (query === 'api.eventsQueries.getEventByIdPublic') {
+      if (query === api.eventsQueries.getEventByIdPublic) {
         return mockEvent as any;
       }
-      if (query === 'api.contentGenerationQueries.getFollowUpEmail') {
+      if (query === api.contentGenerationQueries.getFollowUpEmail) {
         return null;
       }
-      if (query === 'api.contentGenerationQueries.getGeneratedPosts') {
+      if (query === api.contentGenerationQueries.getGeneratedPosts) {
         return [];
       }
-      return null;
+      if (query === api.automations.getAutomations) {
+        return [];
+      }
+      return undefined;
     });
 
     render(<MeetingDetailPage />);

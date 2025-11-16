@@ -2,7 +2,6 @@
 
 import { useQuery, useMutation } from 'convex/react';
 import { api } from '@/convex/_generated/api';
-import { useAuth } from '@workos-inc/authkit-nextjs/components';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -17,7 +16,6 @@ import { Switch } from '@/components/ui/switch';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 export default function SettingsPage() {
-  const { user, signOut } = useAuth();
   const searchParams = useSearchParams();
   const router = useRouter();
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
@@ -113,6 +111,7 @@ export default function SettingsPage() {
   const handleRemoveSocialMedia = async (connectionId: string) => {
     if (confirm('Are you sure you want to disconnect this account?')) {
       try {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         await removeSocialMediaConnection({ connectionId: connectionId as any });
         setMessage({ type: 'success', text: 'Account disconnected successfully!' });
       } catch {
@@ -127,6 +126,7 @@ export default function SettingsPage() {
     try {
       if (editingAutomation._id) {
         await updateAutomation({
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
           automationId: editingAutomation._id as any,
           name: editingAutomation.name,
           type: editingAutomation.type,
@@ -157,6 +157,7 @@ export default function SettingsPage() {
   const handleDeleteAutomation = async (automationId: string) => {
     if (confirm('Are you sure you want to delete this automation?')) {
       try {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         await deleteAutomation({ automationId: automationId as any });
         setMessage({ type: 'success', text: 'Automation deleted successfully!' });
       } catch {

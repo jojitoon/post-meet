@@ -4,6 +4,7 @@ import userEvent from '@testing-library/user-event';
 import SettingsPage from '@/app/settings/page';
 import { useQuery, useMutation } from 'convex/react';
 import { useAuth } from '@workos-inc/authkit-nextjs/components';
+import { api } from '@/convex/_generated/api';
 
 // Mock Convex hooks
 vi.mock('convex/react', () => ({
@@ -42,12 +43,21 @@ describe('Settings Page', () => {
       signOut: vi.fn(),
     } as any);
 
-    vi.mocked(useQuery).mockReturnValue({
-      calendars: [],
-      userSettings: null,
-      socialMediaConnections: [],
-      automations: [],
-    } as any);
+    vi.mocked(useQuery).mockImplementation((query) => {
+      if (query === api.calendars.listCalendars) {
+        return [] as any;
+      }
+      if (query === api.userSettings.getUserSettings) {
+        return null;
+      }
+      if (query === api.socialMedia.getSocialMediaConnections) {
+        return [] as any;
+      }
+      if (query === api.automations.getAutomations) {
+        return [] as any;
+      }
+      return undefined;
+    });
 
     render(<SettingsPage />);
 
@@ -63,12 +73,21 @@ describe('Settings Page', () => {
       signOut: vi.fn(),
     } as any);
 
-    vi.mocked(useQuery).mockReturnValue({
-      calendars: [],
-      userSettings: null,
-      socialMediaConnections: [],
-      automations: [],
-    } as any);
+    vi.mocked(useQuery).mockImplementation((query) => {
+      if (query === api.calendars.listCalendars) {
+        return [] as any;
+      }
+      if (query === api.userSettings.getUserSettings) {
+        return null;
+      }
+      if (query === api.socialMedia.getSocialMediaConnections) {
+        return [] as any;
+      }
+      if (query === api.automations.getAutomations) {
+        return [] as any;
+      }
+      return undefined;
+    });
 
     render(<SettingsPage />);
 
@@ -84,12 +103,21 @@ describe('Settings Page', () => {
       signOut: vi.fn(),
     } as any);
 
-    vi.mocked(useQuery).mockReturnValue({
-      calendars: [],
-      userSettings: null,
-      socialMediaConnections: [],
-      automations: [],
-    } as any);
+    vi.mocked(useQuery).mockImplementation((query) => {
+      if (query === api.calendars.listCalendars) {
+        return [] as any;
+      }
+      if (query === api.userSettings.getUserSettings) {
+        return null;
+      }
+      if (query === api.socialMedia.getSocialMediaConnections) {
+        return [] as any;
+      }
+      if (query === api.automations.getAutomations) {
+        return [] as any;
+      }
+      return undefined;
+    });
 
     render(<SettingsPage />);
 
@@ -106,12 +134,21 @@ describe('Settings Page', () => {
       signOut: vi.fn(),
     } as any);
 
-    vi.mocked(useQuery).mockReturnValue({
-      calendars: [],
-      userSettings: { botJoinMinutesBefore: 5 },
-      socialMediaConnections: [],
-      automations: [],
-    } as any);
+    vi.mocked(useQuery).mockImplementation((query) => {
+      if (query === 'api.calendars.listCalendars') {
+        return [] as any;
+      }
+      if (query === 'api.userSettings.getUserSettings') {
+        return { botJoinMinutesBefore: 5 } as any;
+      }
+      if (query === 'api.socialMedia.getSocialMediaConnections') {
+        return [] as any;
+      }
+      if (query === 'api.automations.getAutomations') {
+        return [] as any;
+      }
+      return undefined;
+    });
 
     render(<SettingsPage />);
 
@@ -137,19 +174,19 @@ describe('Settings Page', () => {
     ];
 
     vi.mocked(useQuery).mockImplementation((query) => {
-      if (query === 'api.calendars.listCalendars') {
+      if (query === api.calendars.listCalendars) {
         return mockCalendars as any;
       }
-      if (query === 'api.userSettings.getUserSettings') {
+      if (query === api.userSettings.getUserSettings) {
         return null;
       }
-      if (query === 'api.socialMedia.getSocialMediaConnections') {
+      if (query === api.socialMedia.getSocialMediaConnections) {
         return [];
       }
-      if (query === 'api.automations.getAutomations') {
+      if (query === api.automations.getAutomations) {
         return [];
       }
-      return null;
+      return undefined;
     });
 
     render(<SettingsPage />);
@@ -168,11 +205,12 @@ describe('Settings Page', () => {
       signOut: vi.fn(),
     } as any);
 
-    vi.mocked(useQuery).mockReturnValue(undefined);
+    vi.mocked(useQuery).mockImplementation(() => undefined);
 
     render(<SettingsPage />);
 
-    expect(screen.getByTestId('authenticated')).toBeInTheDocument();
+    // Settings page should render even when loading
+    expect(screen.getByText('Settings')).toBeInTheDocument();
   });
 
   it('should render social media connection status', async () => {
@@ -265,12 +303,21 @@ describe('Settings Page', () => {
       signOut: vi.fn(),
     } as any);
 
-    vi.mocked(useQuery).mockReturnValue({
-      calendars: [],
-      userSettings: null,
-      socialMediaConnections: [],
-      automations: [],
-    } as any);
+    vi.mocked(useQuery).mockImplementation((query) => {
+      if (query === api.calendars.listCalendars) {
+        return [] as any;
+      }
+      if (query === api.userSettings.getUserSettings) {
+        return null;
+      }
+      if (query === api.socialMedia.getSocialMediaConnections) {
+        return [] as any;
+      }
+      if (query === api.automations.getAutomations) {
+        return [] as any;
+      }
+      return undefined;
+    });
 
     render(<SettingsPage />);
 
