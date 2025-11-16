@@ -30,6 +30,7 @@ export const saveSocialMediaConnection = mutation({
     pageId: v.optional(v.string()),
     pageAccessToken: v.optional(v.string()),
     pageName: v.optional(v.string()),
+    autoPost: v.optional(v.boolean()),
   },
   handler: async (ctx, args) => {
     const identity = await ctx.auth.getUserIdentity();
@@ -55,6 +56,7 @@ export const saveSocialMediaConnection = mutation({
         pageId: args.pageId,
         pageAccessToken: args.pageAccessToken,
         pageName: args.pageName,
+        autoPost: args.autoPost,
       });
       return existing._id;
     } else {
@@ -69,8 +71,40 @@ export const saveSocialMediaConnection = mutation({
         pageId: args.pageId,
         pageAccessToken: args.pageAccessToken,
         pageName: args.pageName,
+        autoPost: args.autoPost ?? false,
       });
     }
+  },
+});
+
+// Mutation to update autoPost setting
+export const updateAutoPostSetting = mutation({
+  args: {
+    platform: v.string(),
+    autoPost: v.boolean(),
+  },
+  handler: async (ctx, args) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) {
+      throw new Error('Not authenticated');
+    }
+
+    const connection = await ctx.db
+      .query('socialMediaConnections')
+      .withIndex('by_user_and_platform', (q) =>
+        q.eq('userId', identity.subject).eq('platform', args.platform),
+      )
+      .first();
+
+    if (!connection) {
+      throw new Error('Social media connection not found');
+    }
+
+    await ctx.db.patch(connection._id, {
+      autoPost: args.autoPost,
+    });
+
+    return { success: true };
   },
 });
 

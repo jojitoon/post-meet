@@ -37,7 +37,7 @@ export const saveGeneratedPost = internalMutation({
   args: {
     eventId: v.id('events'),
     userId: v.string(),
-    automationId: v.id('automations'),
+    automationId: v.optional(v.id('automations')),
     platform: v.string(),
     content: v.string(),
     status: v.string(),

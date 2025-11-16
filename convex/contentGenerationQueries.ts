@@ -50,10 +50,10 @@ export const getGeneratedPosts = query({
     // Get automation details for each post
     return await Promise.all(
       posts.map(async (post) => {
-        const automation = await ctx.db.get(post.automationId);
+        const automation = post.automationId ? await ctx.db.get(post.automationId) : null;
         return {
           ...post,
-          automationName: automation?.name || 'Unknown',
+          automationName: automation?.name || 'Default',
         };
       }),
     );

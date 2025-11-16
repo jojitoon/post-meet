@@ -26,6 +26,7 @@ function SettingsContent() {
   const updateUserSettings = useMutation(api.userSettings.updateUserSettings);
   const socialMediaConnections = useQuery(api.socialMedia.getSocialMediaConnections);
   const removeSocialMediaConnection = useMutation(api.socialMedia.removeSocialMediaConnection);
+  const updateAutoPostSetting = useMutation(api.socialMedia.updateAutoPostSetting);
   const automations = useQuery(api.automations.getAutomations);
   const createAutomation = useMutation(api.automations.createAutomation);
   const updateAutomation = useMutation(api.automations.updateAutomation);
@@ -348,6 +349,47 @@ function SettingsContent() {
                   </div>
                 </div>
 
+                {/* Auto-Posting Settings */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="text-lg">Auto-Posting Settings</CardTitle>
+                    <CardDescription>Configure automatic posting of generated content to LinkedIn</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    {socialMediaConnections?.find((c) => c.platform === 'linkedin') ? (
+                      <div className="flex items-center justify-between p-4 border rounded-lg bg-muted/50">
+                        <div className="space-y-0.5 flex-1">
+                          <Label htmlFor="linkedin-autopost" className="text-base font-medium">
+                            Automatically Post Generated Content
+                          </Label>
+                          <p className="text-sm text-muted-foreground">
+                            When enabled, generated LinkedIn posts will be automatically published when meetings end.
+                            When disabled, posts will be saved as drafts for your review.
+                          </p>
+                        </div>
+                        <Switch
+                          id="linkedin-autopost"
+                          checked={socialMediaConnections.find((c) => c.platform === 'linkedin')?.autoPost ?? false}
+                          onCheckedChange={async (checked) => {
+                            try {
+                              await updateAutoPostSetting({ platform: 'linkedin', autoPost: checked });
+                              setMessage({ type: 'success', text: 'Auto-post setting updated!' });
+                            } catch {
+                              setMessage({ type: 'error', text: 'Failed to update auto-post setting' });
+                            }
+                          }}
+                        />
+                      </div>
+                    ) : (
+                      <div className="p-4 border rounded-lg bg-muted/30">
+                        <p className="text-sm text-muted-foreground">
+                          Connect your LinkedIn account to enable auto-posting settings.
+                        </p>
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+
                 {/* LinkedIn Automations */}
                 <div className="space-y-4">
                   <div className="flex items-center justify-between">
@@ -496,6 +538,47 @@ function SettingsContent() {
                     )}
                   </div>
                 </div>
+
+                {/* Auto-Posting Settings */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="text-lg">Auto-Posting Settings</CardTitle>
+                    <CardDescription>Configure automatic posting of generated content to Facebook</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    {socialMediaConnections?.find((c) => c.platform === 'facebook') ? (
+                      <div className="flex items-center justify-between p-4 border rounded-lg bg-muted/50">
+                        <div className="space-y-0.5 flex-1">
+                          <Label htmlFor="facebook-autopost" className="text-base font-medium">
+                            Automatically Post Generated Content
+                          </Label>
+                          <p className="text-sm text-muted-foreground">
+                            When enabled, generated Facebook posts will be automatically published when meetings end.
+                            When disabled, posts will be saved as drafts for your review.
+                          </p>
+                        </div>
+                        <Switch
+                          id="facebook-autopost"
+                          checked={socialMediaConnections.find((c) => c.platform === 'facebook')?.autoPost ?? false}
+                          onCheckedChange={async (checked) => {
+                            try {
+                              await updateAutoPostSetting({ platform: 'facebook', autoPost: checked });
+                              setMessage({ type: 'success', text: 'Auto-post setting updated!' });
+                            } catch {
+                              setMessage({ type: 'error', text: 'Failed to update auto-post setting' });
+                            }
+                          }}
+                        />
+                      </div>
+                    ) : (
+                      <div className="p-4 border rounded-lg bg-muted/30">
+                        <p className="text-sm text-muted-foreground">
+                          Connect your Facebook account to enable auto-posting settings.
+                        </p>
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
 
                 {/* Facebook Automations */}
                 <div className="space-y-4">

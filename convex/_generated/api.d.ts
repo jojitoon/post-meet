@@ -8,6 +8,8 @@
  * @module
  */
 
+import type * as autoPosting from "../autoPosting.js";
+import type * as autoPostingQueries from "../autoPostingQueries.js";
 import type * as automations from "../automations.js";
 import type * as botService from "../botService.js";
 import type * as calendars from "../calendars.js";
@@ -33,6 +35,8 @@ import type {
 } from "convex/server";
 
 declare const fullApi: ApiFromModules<{
+  autoPosting: typeof autoPosting;
+  autoPostingQueries: typeof autoPostingQueries;
   automations: typeof automations;
   botService: typeof botService;
   calendars: typeof calendars;

@@ -201,15 +201,15 @@ export const listEvents = query({
 
     const limit = args.limit || 100;
 
-    const events = await ctx.db
+    // Get all events for the user (no limit on query to ensure we get all events)
+    const allEvents = await ctx.db
       .query('events')
       .withIndex('by_user', (q) => q.eq('userId', identity.subject))
-      .order('asc')
-      .take(limit);
+      .collect();
 
     // Get calendar info for each event
     const eventsWithCalendars = await Promise.all(
-      events.map(async (event) => {
+      allEvents.map(async (event) => {
         const calendar = await ctx.db.get(event.calendarId);
         return {
           ...event,
@@ -219,7 +219,10 @@ export const listEvents = query({
       }),
     );
 
-    return eventsWithCalendars.sort((a, b) => new Date(a.startTime).getTime() - new Date(b.startTime).getTime());
+    // Sort by startTime ascending and apply limit
+    return eventsWithCalendars
+      .sort((a, b) => new Date(a.startTime).getTime() - new Date(b.startTime).getTime())
+      .slice(0, limit);
   },
 });
 

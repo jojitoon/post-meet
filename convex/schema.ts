@@ -59,6 +59,7 @@ export default defineSchema({
     pageId: v.optional(v.string()), // Facebook Page ID
     pageAccessToken: v.optional(v.string()), // Page access token for posting
     pageName: v.optional(v.string()), // Page name
+    autoPost: v.optional(v.boolean()), // Whether to automatically post generated content
   })
     .index('by_user', ['userId'])
     .index('by_user_and_platform', ['userId', 'platform']),
@@ -76,7 +77,7 @@ export default defineSchema({
   generatedPosts: defineTable({
     eventId: v.id('events'),
     userId: v.string(),
-    automationId: v.id('automations'),
+    automationId: v.optional(v.id('automations')), // Optional - can be null for default posts
     platform: v.string(), // 'linkedin' or 'facebook'
     content: v.string(), // Generated post content
     status: v.string(), // 'draft', 'posted', 'failed'

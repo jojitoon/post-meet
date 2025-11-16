@@ -127,3 +127,16 @@ export const getAutomationById = internalQuery({
   },
 });
 
+// Internal query to get automations by user (for use in actions)
+export const getAutomationsByUser = internalQuery({
+  args: {
+    userId: v.string(),
+  },
+  handler: async (ctx, args) => {
+    return await ctx.db
+      .query('automations')
+      .withIndex('by_user', (q) => q.eq('userId', args.userId))
+      .collect();
+  },
+});
+
