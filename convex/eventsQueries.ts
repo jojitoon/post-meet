@@ -401,7 +401,10 @@ export const getEndedEventsWithMeetingBaasBots = internalQuery({
     return allEvents.filter((event) => {
       const eventEnd = new Date(event.endTime);
       // Event has ended, has Meeting BaaS bot, but no transcription yet
-      return eventEnd <= now && event.meetingBaasBotId !== undefined && event.meetingBaasTranscription === undefined;
+      return (
+        (eventEnd <= now && event.meetingBaasBotId !== undefined && event.meetingBaasTranscription === undefined) ||
+        event.botStatus === 'in_meeting'
+      );
     });
   },
 });
