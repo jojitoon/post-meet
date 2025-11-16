@@ -111,8 +111,8 @@ function SignInForm() {
           Never Miss a Follow-up Again
         </h1>
         <p className="text-xl text-muted-foreground max-w-2xl mx-auto mb-8">
-          Post Meet automatically joins your meetings, captures transcripts, and generates follow-up emails and
-          social media content - all powered by AI.
+          Post Meet automatically joins your meetings, captures transcripts, and generates follow-up emails and social
+          media content - all powered by AI.
         </p>
         <div className="flex flex-row gap-4 justify-center">
           <Link href="/sign-up">
@@ -137,7 +137,9 @@ function SignInForm() {
             const Icon = step.icon;
             return (
               <div key={index} className="relative">
-                <div className={`p-6 rounded-xl border-2 ${step.bgColor} border-border hover:border-primary/50 transition-all`}>
+                <div
+                  className={`p-6 rounded-xl border-2 ${step.bgColor} border-border hover:border-primary/50 transition-all`}
+                >
                   <div className={`${step.color} mb-4`}>
                     <Icon className="h-8 w-8" />
                   </div>
@@ -183,7 +185,7 @@ function SignInForm() {
         <CardContent className="p-12 text-center">
           <h2 className="text-3xl font-bold mb-4">Ready to Transform Your Meeting Workflow?</h2>
           <p className="text-lg text-muted-foreground mb-8 max-w-2xl mx-auto">
-            Join thousands of professionals who save hours every week with Post Meet's automated meeting
+            Join thousands of professionals who save hours every week with Post Meet&apos;s automated meeting
             assistance.
           </p>
           <div className="flex flex-row gap-4 justify-center">

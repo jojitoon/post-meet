@@ -96,7 +96,7 @@ function UserMenu() {
       <DropdownMenuTrigger asChild>
         <button className="flex items-center gap-2 rounded-full focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2">
           <Avatar className="h-9 w-9 border-2 border-primary/20 hover:border-primary/40 transition-colors">
-            <AvatarImage src={user.picture || undefined} alt={displayName} />
+            <AvatarImage src={user.profilePictureUrl || undefined} alt={displayName} />
             <AvatarFallback className="bg-primary/10 text-primary font-semibold">{initials}</AvatarFallback>
           </Avatar>
         </button>
