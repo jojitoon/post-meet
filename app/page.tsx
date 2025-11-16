@@ -15,6 +15,12 @@ import {
   Bot,
   RefreshCw,
   FileText,
+  CheckCircle2,
+  ArrowRight,
+  Mail,
+  Share2,
+  Sparkles,
+  Zap,
 } from 'lucide-react';
 import { Switch } from '@/components/ui/switch';
 import { Button } from '@/components/ui/button';
@@ -37,19 +43,164 @@ export default function Home() {
 }
 
 function SignInForm() {
+  const lifecycleSteps = [
+    {
+      icon: CalendarIcon,
+      title: 'Connect Your Calendar',
+      description: 'Sync your Google Calendar to automatically track all your meetings',
+      color: 'text-blue-500',
+      bgColor: 'bg-blue-500/10',
+    },
+    {
+      icon: Bot,
+      title: 'AI Bot Joins Meetings',
+      description: 'Our intelligent bot automatically joins your meetings and captures everything',
+      color: 'text-purple-500',
+      bgColor: 'bg-purple-500/10',
+    },
+    {
+      icon: FileText,
+      title: 'Get Full Transcripts',
+      description: 'Receive complete meeting transcripts with speaker identification',
+      color: 'text-green-500',
+      bgColor: 'bg-green-500/10',
+    },
+    {
+      icon: Mail,
+      title: 'AI-Generated Follow-ups',
+      description: 'Automatically generate professional follow-up emails from your meetings',
+      color: 'text-orange-500',
+      bgColor: 'bg-orange-500/10',
+    },
+    {
+      icon: Share2,
+      title: 'Social Media Content',
+      description: 'Create and schedule social media posts based on meeting insights',
+      color: 'text-pink-500',
+      bgColor: 'bg-pink-500/10',
+    },
+  ];
+
+  const features = [
+    {
+      icon: Zap,
+      title: 'Automated Workflow',
+      description: 'Set it and forget it - Post Meet handles everything automatically',
+    },
+    {
+      icon: Sparkles,
+      title: 'AI-Powered',
+      description: 'Leverage advanced AI to extract insights and generate content',
+    },
+    {
+      icon: CheckCircle2,
+      title: 'Time Saving',
+      description: 'Save hours every week by automating meeting follow-ups and content creation',
+    },
+  ];
+
   return (
-    <div className="flex flex-col gap-8 w-96 mx-auto">
-      <h1 className="text-2xl font-bold">Welcome to Post Meet</h1>
-      <div className="flex flex-row gap-2">
-        <a href="/sign-in">
-          <button className="bg-foreground text-background px-4 py-2 rounded-md">Sign in</button>
-        </a>
-        <a href="/sign-up">
-          <button className="bg-background text-foreground border border-foreground px-4 py-2 rounded-md">
-            Sign up
-          </button>
-        </a>
+    <div className="w-full max-w-7xl mx-auto">
+      {/* Hero Section */}
+      <div className="text-center mb-16 mt-8">
+        <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary/10 text-primary mb-6">
+          <Sparkles className="h-4 w-4" />
+          <span className="text-sm font-medium">AI-Powered Meeting Assistant</span>
+        </div>
+        <h1 className="text-5xl md:text-6xl font-bold mb-6 bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-transparent">
+          Never Miss a Follow-up Again
+        </h1>
+        <p className="text-xl text-muted-foreground max-w-2xl mx-auto mb-8">
+          Post Meet automatically joins your meetings, captures transcripts, and generates follow-up emails and
+          social media content - all powered by AI.
+        </p>
+        <div className="flex flex-row gap-4 justify-center">
+          <Link href="/sign-up">
+            <Button size="lg" className="gap-2">
+              Get Started Free
+              <ArrowRight className="h-4 w-4" />
+            </Button>
+          </Link>
+          <Link href="/sign-in">
+            <Button size="lg" variant="outline">
+              Sign In
+            </Button>
+          </Link>
+        </div>
       </div>
+
+      {/* Lifecycle Section */}
+      <div className="mb-20">
+        <h2 className="text-3xl font-bold text-center mb-12">How It Works</h2>
+        <div className="grid grid-cols-1 md:grid-cols-5 gap-6">
+          {lifecycleSteps.map((step, index) => {
+            const Icon = step.icon;
+            return (
+              <div key={index} className="relative">
+                <div className={`p-6 rounded-xl border-2 ${step.bgColor} border-border hover:border-primary/50 transition-all`}>
+                  <div className={`${step.color} mb-4`}>
+                    <Icon className="h-8 w-8" />
+                  </div>
+                  <h3 className="font-semibold text-lg mb-2">{step.title}</h3>
+                  <p className="text-sm text-muted-foreground">{step.description}</p>
+                </div>
+                {index < lifecycleSteps.length - 1 && (
+                  <div className="hidden md:block absolute top-1/2 -right-3 transform -translate-y-1/2 z-10">
+                    <ArrowRight className="h-6 w-6 text-muted-foreground" />
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Features Section */}
+      <div className="mb-20">
+        <h2 className="text-3xl font-bold text-center mb-12">Why Choose Post Meet?</h2>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+          {features.map((feature, index) => {
+            const Icon = feature.icon;
+            return (
+              <Card key={index} className="border-2 hover:border-primary/50 transition-all">
+                <CardHeader>
+                  <div className="text-primary mb-2">
+                    <Icon className="h-8 w-8" />
+                  </div>
+                  <CardTitle>{feature.title}</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-muted-foreground">{feature.description}</p>
+                </CardContent>
+              </Card>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* CTA Section */}
+      <Card className="bg-gradient-to-r from-primary/10 to-primary/5 border-2 border-primary/20">
+        <CardContent className="p-12 text-center">
+          <h2 className="text-3xl font-bold mb-4">Ready to Transform Your Meeting Workflow?</h2>
+          <p className="text-lg text-muted-foreground mb-8 max-w-2xl mx-auto">
+            Join thousands of professionals who save hours every week with Post Meet's automated meeting
+            assistance.
+          </p>
+          <div className="flex flex-row gap-4 justify-center">
+            <Link href="/sign-up">
+              <Button size="lg" className="gap-2">
+                Start Free Trial
+                <ArrowRight className="h-4 w-4" />
+              </Button>
+            </Link>
+            <Link href="/sign-in">
+              <Button size="lg" variant="outline">
+                Sign In
+              </Button>
+            </Link>
+          </div>
+        </CardContent>
+      </Card>
     </div>
   );
 }
