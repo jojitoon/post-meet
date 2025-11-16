@@ -2,7 +2,6 @@
 
 import { useQuery, useMutation, useAction, Authenticated, Unauthenticated } from 'convex/react';
 import { api } from '@/convex/_generated/api';
-import { useAuth } from '@workos-inc/authkit-nextjs/components';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -29,33 +28,8 @@ import { detectMeetingPlatform, getPlatformName, type MeetingPlatform } from '@/
 import { toast } from 'sonner';
 
 export default function EventsPage() {
-  const { user, signOut } = useAuth();
-
   return (
     <>
-      <header className="sticky top-0 z-10 bg-background p-4 border-b-2 border-slate-200 dark:border-slate-800 flex flex-row justify-between items-center">
-        <div className="flex items-center gap-4">
-          <Link href="/" className="text-lg font-semibold hover:underline">
-            Post Meet
-          </Link>
-        </div>
-        {user && (
-          <div className="flex items-center gap-2">
-            <Link href="/settings" className="text-sm hover:underline">
-              Settings
-            </Link>
-            <span className="text-sm">{user.email}</span>
-            <button
-              onClick={() => {
-                void signOut();
-              }}
-              className="bg-red-500 text-white px-3 py-1 rounded-md text-sm hover:bg-red-600"
-            >
-              Sign out
-            </button>
-          </div>
-        )}
-      </header>
       <Authenticated>
         <EventsContent />
       </Authenticated>

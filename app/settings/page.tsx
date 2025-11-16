@@ -10,7 +10,6 @@ import { Label } from '@/components/ui/label';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { Trash2, Plus, Calendar as CalendarIcon, Bot, Share2, Settings as SettingsIcon } from 'lucide-react';
-import Link from 'next/link';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -168,24 +167,6 @@ export default function SettingsPage() {
 
   return (
     <>
-      <header className="sticky top-0 z-10 bg-background p-4 border-b-2 border-slate-200 dark:border-slate-800 flex flex-row justify-between items-center">
-        <Link href="/" className="text-lg font-semibold hover:underline">
-          Post Meet
-        </Link>
-        {user && (
-          <div className="flex items-center gap-2">
-            <span className="text-sm">{user.email}</span>
-            <button
-              onClick={() => {
-                void signOut();
-              }}
-              className="bg-red-500 text-white px-3 py-1 rounded-md text-sm hover:bg-red-600"
-            >
-              Sign out
-            </button>
-          </div>
-        )}
-      </header>
       <div className="container mx-auto p-8 max-w-4xl">
         <div className="mb-8">
           <h1 className="text-4xl font-bold mb-2">Settings</h1>
@@ -351,9 +332,7 @@ export default function SettingsPage() {
                         variant="ghost"
                         size="sm"
                         onClick={() =>
-                          handleRemoveSocialMedia(
-                            socialMediaConnections.find((c) => c.platform === 'linkedin')!._id,
-                          )
+                          handleRemoveSocialMedia(socialMediaConnections.find((c) => c.platform === 'linkedin')!._id)
                         }
                         className="text-destructive hover:text-destructive"
                       >
@@ -378,17 +357,17 @@ export default function SettingsPage() {
                       </p>
                     </div>
                     <Button
-                onClick={() => {
-                  setEditingAutomation({
-                    name: '',
-                    type: 'Generate post',
-                    platform: activeTab === 'linkedin' ? 'LinkedIn post' : 'Facebook post',
-                    description: '',
-                    example: '',
-                    isActive: true,
-                  });
-                  setAutomationModalOpen(true);
-                }}
+                      onClick={() => {
+                        setEditingAutomation({
+                          name: '',
+                          type: 'Generate post',
+                          platform: activeTab === 'linkedin' ? 'LinkedIn post' : 'Facebook post',
+                          description: '',
+                          example: '',
+                          isActive: true,
+                        });
+                        setAutomationModalOpen(true);
+                      }}
                       className="gap-2"
                     >
                       <Plus className="h-4 w-4" />
@@ -403,17 +382,17 @@ export default function SettingsPage() {
                       <SettingsIcon className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
                       <p className="text-muted-foreground mb-4">No automations configured for LinkedIn</p>
                       <Button
-                onClick={() => {
-                  setEditingAutomation({
-                    name: '',
-                    type: 'Generate post',
-                    platform: activeTab === 'linkedin' ? 'LinkedIn post' : 'Facebook post',
-                    description: '',
-                    example: '',
-                    isActive: true,
-                  });
-                  setAutomationModalOpen(true);
-                }}
+                        onClick={() => {
+                          setEditingAutomation({
+                            name: '',
+                            type: 'Generate post',
+                            platform: activeTab === 'linkedin' ? 'LinkedIn post' : 'Facebook post',
+                            description: '',
+                            example: '',
+                            isActive: true,
+                          });
+                          setAutomationModalOpen(true);
+                        }}
                         variant="outline"
                       >
                         <Plus className="h-4 w-4 mr-2" />
@@ -442,9 +421,7 @@ export default function SettingsPage() {
                                   </span>
                                 )}
                               </div>
-                              <div className="text-sm text-muted-foreground line-clamp-2">
-                                {automation.description}
-                              </div>
+                              <div className="text-sm text-muted-foreground line-clamp-2">{automation.description}</div>
                             </div>
                             <div className="flex items-center gap-2">
                               <Button
@@ -504,9 +481,7 @@ export default function SettingsPage() {
                         variant="ghost"
                         size="sm"
                         onClick={() =>
-                          handleRemoveSocialMedia(
-                            socialMediaConnections.find((c) => c.platform === 'facebook')!._id,
-                          )
+                          handleRemoveSocialMedia(socialMediaConnections.find((c) => c.platform === 'facebook')!._id)
                         }
                         className="text-destructive hover:text-destructive"
                       >
@@ -595,9 +570,7 @@ export default function SettingsPage() {
                                   </span>
                                 )}
                               </div>
-                              <div className="text-sm text-muted-foreground line-clamp-2">
-                                {automation.description}
-                              </div>
+                              <div className="text-sm text-muted-foreground line-clamp-2">{automation.description}</div>
                             </div>
                             <div className="flex items-center gap-2">
                               <Button
@@ -651,9 +624,7 @@ export default function SettingsPage() {
                 <Input
                   id="automation-name"
                   value={editingAutomation?.name || ''}
-                  onChange={(e) =>
-                    setEditingAutomation((prev) => (prev ? { ...prev, name: e.target.value } : null))
-                  }
+                  onChange={(e) => setEditingAutomation((prev) => (prev ? { ...prev, name: e.target.value } : null))}
                   placeholder="Generate LinkedIn post"
                 />
               </div>
@@ -663,9 +634,7 @@ export default function SettingsPage() {
                 <Input
                   id="automation-type"
                   value={editingAutomation?.type || ''}
-                  onChange={(e) =>
-                    setEditingAutomation((prev) => (prev ? { ...prev, type: e.target.value } : null))
-                  }
+                  onChange={(e) => setEditingAutomation((prev) => (prev ? { ...prev, type: e.target.value } : null))}
                   placeholder="Generate post"
                 />
               </div>
@@ -706,9 +675,7 @@ export default function SettingsPage() {
                 <Textarea
                   id="automation-example"
                   value={editingAutomation?.example || ''}
-                  onChange={(e) =>
-                    setEditingAutomation((prev) => (prev ? { ...prev, example: e.target.value } : null))
-                  }
+                  onChange={(e) => setEditingAutomation((prev) => (prev ? { ...prev, example: e.target.value } : null))}
                   placeholder="Example output..."
                   rows={4}
                 />

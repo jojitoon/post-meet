@@ -1,14 +1,15 @@
 'use client';
 
-import { useQuery, useAction } from 'convex/react';
+import { useQuery, useAction, useMutation } from 'convex/react';
 import { api } from '@/convex/_generated/api';
 import { useAuth } from '@workos-inc/authkit-nextjs/components';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Switch } from '@/components/ui/switch';
 import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
   FileText,
   Mail,
@@ -21,8 +22,15 @@ import {
   Calendar as CalendarIcon,
   ArrowLeft,
   Loader2,
+  Bot,
+  Download,
+  Video,
+  ChevronDown,
+  ChevronUp,
+  ExternalLink,
 } from 'lucide-react';
 import { toast } from 'sonner';
+import { detectMeetingPlatform, getPlatformName } from '@/app/utils/meetingPlatform';
 
 export default function MeetingDetailPage() {
   const params = useParams();
@@ -37,16 +45,32 @@ export default function MeetingDetailPage() {
   const generatePost = useAction(api.contentGeneration.generateSocialMediaPost);
   const postToLinkedIn = useAction(api.socialMediaPosting.postToLinkedIn);
   const postToFacebook = useAction(api.socialMediaPosting.postToFacebook);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const sendBotToMeeting = useAction((api as any).botService.sendBotToMeetingManually);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const recallBot = useAction((api as any).botService.recallBot);
+  const toggleNotetakerRequest = useMutation(api.eventsQueries.toggleNotetakerRequest);
 
   const [isGeneratingEmail, setIsGeneratingEmail] = useState(false);
   const [isGeneratingPost, setIsGeneratingPost] = useState<{ [key: string]: boolean }>({});
   const [isPosting, setIsPosting] = useState<{ [key: string]: boolean }>({});
+  const [isSendingBot, setIsSendingBot] = useState(false);
+  const [isRecallingBot, setIsRecallingBot] = useState(false);
+  const [notetakerRequested, setNotetakerRequested] = useState(false);
+  const [showAttendees, setShowAttendees] = useState(false);
   const [selectedPost, setSelectedPost] = useState<{
     _id: string;
     content: string;
     platform: string;
     status: string;
   } | null>(null);
+
+  // Sync notetaker state with event
+  useEffect(() => {
+    if (event) {
+      setNotetakerRequested(event.notetakerRequested || false);
+    }
+  }, [event?.notetakerRequested]);
 
   const handleGenerateEmail = async () => {
     if (!event?.meetingBaasTranscription) {
@@ -117,6 +141,59 @@ export default function MeetingDetailPage() {
       toast.error(`Failed to post to ${post.platform}`);
     } finally {
       setIsPosting((prev) => ({ ...prev, [post._id]: false }));
+    }
+  };
+
+  const handleSendBot = async () => {
+    if (!event?.meetingLink) {
+      toast.error('No meeting link available');
+      return;
+    }
+
+    setIsSendingBot(true);
+    try {
+      await sendBotToMeeting({
+        eventId: eventId as any,
+      });
+      toast.success('Bot will join the meeting at the scheduled time!');
+    } catch (error) {
+      console.error('Failed to send bot:', error);
+      toast.error('Failed to send bot. Please try again.');
+    } finally {
+      setIsSendingBot(false);
+    }
+  };
+
+  const handleRecallBot = async () => {
+    setIsRecallingBot(true);
+    try {
+      await recallBot({
+        eventId: eventId as any,
+      });
+      toast.success('Transcription retrieval initiated. It may take a few moments to process.');
+    } catch (error) {
+      console.error('Failed to recall bot:', error);
+      toast.error('Failed to retrieve transcription. Please try again.');
+    } finally {
+      setIsRecallingBot(false);
+    }
+  };
+
+  const handleToggleNotetaker = async (checked: boolean) => {
+    // Optimistically update UI
+    setNotetakerRequested(checked);
+
+    try {
+      await toggleNotetakerRequest({
+        eventId: eventId as any,
+        notetakerRequested: checked,
+      });
+      toast.success(checked ? 'Notetaker requested' : 'Notetaker request removed');
+    } catch (error) {
+      // Revert on error
+      setNotetakerRequested(!checked);
+      console.error('Failed to toggle notetaker request:', error);
+      toast.error('Failed to update notetaker request');
     }
   };
 
@@ -224,7 +301,7 @@ export default function MeetingDetailPage() {
           </Button>
         </Link>
         <h1 className="text-4xl font-bold mb-2">{event.title}</h1>
-        <div className="flex items-center gap-4 text-muted-foreground">
+        <div className="flex items-center gap-4 text-muted-foreground flex-wrap">
           <div className="flex items-center gap-2">
             <Clock className="h-4 w-4" />
             <span>
@@ -233,15 +310,249 @@ export default function MeetingDetailPage() {
             </span>
           </div>
           {event.attendees && event.attendees.length > 0 && (
-            <div className="flex items-center gap-2">
+            <button
+              onClick={() => setShowAttendees(!showAttendees)}
+              className="flex items-center gap-2 hover:text-foreground transition-colors cursor-pointer"
+            >
               <Users className="h-4 w-4" />
-              <span>{event.attendees.length} attendee{event.attendees.length !== 1 ? 's' : ''}</span>
-            </div>
+              <span>
+                {event.attendees.length} attendee{event.attendees.length !== 1 ? 's' : ''}
+              </span>
+              {showAttendees ? (
+                <ChevronUp className="h-4 w-4" />
+              ) : (
+                <ChevronDown className="h-4 w-4" />
+              )}
+            </button>
           )}
         </div>
       </div>
 
+      {/* Attendees Expandable Section */}
+      {event.attendees && event.attendees.length > 0 && showAttendees && (
+        <Card className="mb-6">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Users className="h-5 w-5" />
+              Attendees ({event.attendees.length})
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-2">
+              {event.attendees.map((attendee, index) => (
+                <div key={index} className="flex items-center gap-2 p-2 rounded-md hover:bg-muted transition-colors">
+                  <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center text-primary font-medium text-sm">
+                    {attendee.charAt(0).toUpperCase()}
+                  </div>
+                  <span className="text-sm">{attendee}</span>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       <div className="grid gap-6">
+        {/* Meeting Details Section */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Meeting Details</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              {/* Meeting Link */}
+              {event.meetingLink && (() => {
+                const platform = detectMeetingPlatform(event.meetingLink);
+                const platformName = getPlatformName(platform);
+                return (
+                  <div className="flex items-start gap-3 p-4 border rounded-lg">
+                    {platform === 'zoom' ? (
+                      <div className="h-8 w-8 rounded bg-blue-500 flex items-center justify-center text-white text-xs font-bold shrink-0">
+                        Z
+                      </div>
+                    ) : platform === 'google-meet' ? (
+                      <div className="h-8 w-8 rounded bg-green-500 flex items-center justify-center text-white text-xs font-bold shrink-0">
+                        G
+                      </div>
+                    ) : platform === 'microsoft-teams' ? (
+                      <div className="h-8 w-8 rounded bg-purple-500 flex items-center justify-center text-white text-xs font-bold shrink-0">
+                        T
+                      </div>
+                    ) : (
+                      <Video className="h-8 w-8 text-muted-foreground shrink-0" />
+                    )}
+                    <div className="flex-1 min-w-0">
+                      <p className="font-medium mb-1">Meeting Link</p>
+                      <a
+                        href={event.meetingLink}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-sm text-primary hover:underline flex items-center gap-2 break-all"
+                      >
+                        {event.meetingLink}
+                        <ExternalLink className="h-3 w-3 shrink-0" />
+                      </a>
+                      <Button
+                        asChild
+                        variant="outline"
+                        size="sm"
+                        className="mt-2"
+                      >
+                        <a href={event.meetingLink} target="_blank" rel="noopener noreferrer">
+                          Join {platformName}
+                        </a>
+                      </Button>
+                    </div>
+                  </div>
+                );
+              })()}
+
+              {/* Location */}
+              {event.location && (
+                <div className="flex items-start gap-3 p-4 border rounded-lg">
+                  <MapPin className="h-5 w-5 text-muted-foreground shrink-0 mt-0.5" />
+                  <div className="flex-1">
+                    <p className="font-medium mb-1">Location</p>
+                    <p className="text-sm text-muted-foreground">{event.location}</p>
+                  </div>
+                </div>
+              )}
+
+              {/* Calendar */}
+              {event.calendarName && (
+                <div className="flex items-center gap-3 p-4 border rounded-lg">
+                  <CalendarIcon className="h-5 w-5 text-muted-foreground shrink-0" />
+                  <div className="flex-1">
+                    <p className="font-medium mb-1">Calendar</p>
+                    <p className="text-sm text-muted-foreground">{event.calendarName}</p>
+                  </div>
+                </div>
+              )}
+
+              {/* Description */}
+              {event.description && (
+                <div className="p-4 border rounded-lg">
+                  <p className="font-medium mb-2">Description</p>
+                  <p className="text-sm text-muted-foreground whitespace-pre-wrap">{event.description}</p>
+                </div>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Meeting Actions Section */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Meeting Actions</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              {/* Notetaker Toggle - Only show if meeting has a link */}
+              {event.meetingLink && (
+                <div className="flex items-center justify-between p-4 border rounded-lg">
+                  <div className="flex items-center gap-3">
+                    <Bot className="h-5 w-5 text-muted-foreground" />
+                    <div>
+                      <p className="font-medium">Request Notetaker</p>
+                      <p className="text-sm text-muted-foreground">
+                        Enable automatic transcription for this meeting
+                      </p>
+                    </div>
+                  </div>
+                  <Switch checked={notetakerRequested} onCheckedChange={handleToggleNotetaker} />
+                </div>
+              )}
+
+              {/* Send Bot Button (for upcoming meetings) */}
+              {event.meetingLink && (() => {
+                const eventStart = new Date(event.startTime);
+                const eventEnd = event.endTime ? new Date(event.endTime) : null;
+                const now = new Date();
+                const isUpcoming = eventStart > now;
+                const isCurrentlyHappening = eventStart <= now && eventEnd && eventEnd > now;
+                const hasBot = !!(event.botId || event.meetingBaasBotId);
+
+                if ((isUpcoming || isCurrentlyHappening) && !hasBot && notetakerRequested) {
+                  return (
+                    <Button
+                      onClick={handleSendBot}
+                      disabled={isSendingBot || !notetakerRequested}
+                      className="w-full"
+                    >
+                      {isSendingBot ? (
+                        <>
+                          <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                          Sending Bot...
+                        </>
+                      ) : (
+                        <>
+                          <Bot className="h-4 w-4 mr-2" />
+                          Send Notetaker Bot
+                        </>
+                      )}
+                    </Button>
+                  );
+                }
+                return null;
+              })()}
+
+              {/* Recall Bot Button (for past meetings with bot but no transcription) */}
+              {(() => {
+                const eventEnd = event.endTime ? new Date(event.endTime) : null;
+                const now = new Date();
+                const isPast = eventEnd ? eventEnd < now : false;
+                const hasBot = !!(event.botId || event.meetingBaasBotId);
+                const hasTranscription = !!event.meetingBaasTranscription;
+
+                if (isPast && hasBot && !hasTranscription) {
+                  return (
+                    <Button
+                      onClick={handleRecallBot}
+                      disabled={isRecallingBot}
+                      variant="outline"
+                      className="w-full"
+                    >
+                      {isRecallingBot ? (
+                        <>
+                          <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                          Retrieving Transcription...
+                        </>
+                      ) : (
+                        <>
+                          <Download className="h-4 w-4 mr-2" />
+                          Retrieve Transcription
+                        </>
+                      )}
+                    </Button>
+                  );
+                }
+                return null;
+              })()}
+
+              {/* Bot Status Indicator */}
+              {(() => {
+                const hasBot = !!(event.botId || event.meetingBaasBotId);
+                const hasTranscription = !!event.meetingBaasTranscription;
+                if (hasBot) {
+                  return (
+                    <div className="flex items-center gap-2 p-3 bg-muted rounded-lg">
+                      <Bot className="h-4 w-4 text-primary" />
+                      <span className="text-sm">
+                        {hasTranscription
+                          ? 'Transcription available'
+                          : event.botStatus === 'in_meeting'
+                            ? 'Bot is in meeting'
+                            : 'Bot sent'}
+                      </span>
+                    </div>
+                  );
+                }
+                return null;
+              })()}
+            </div>
+          </CardContent>
+        </Card>
+
         {/* Transcript Section */}
         {event.meetingBaasTranscription && (
           <Card>

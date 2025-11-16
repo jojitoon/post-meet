@@ -3,8 +3,6 @@
 import { Authenticated, Unauthenticated, useMutation, useQuery, useAction } from 'convex/react';
 import { api } from '../convex/_generated/api';
 import Link from 'next/link';
-import { useAuth } from '@workos-inc/authkit-nextjs/components';
-import type { User } from '@workos-inc/node';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import {
@@ -26,31 +24,15 @@ import { toast } from 'sonner';
 
 export default function Home() {
   return (
-    <>
-      <Header />
-      <main className="p-8 flex flex-col gap-8">
-        {/* <h1 className="text-4xl font-bold text-center">Convex + Next.js + WorkOS</h1> */}
-        <Authenticated>
-          <Content />
-        </Authenticated>
-        <Unauthenticated>
-          <SignInForm />
-        </Unauthenticated>
-      </main>
-    </>
-  );
-}
-
-function Header() {
-  const { user, signOut } = useAuth();
-
-  return (
-    <header className="sticky top-0 z-10 bg-background p-4 border-b-2 border-slate-200 dark:border-slate-800 flex flex-row justify-between items-center">
-      <Link href="/" className="text-lg font-semibold hover:underline">
-        Post Meet
-      </Link>
-      {user && <UserMenu user={user} onSignOut={signOut} />}
-    </header>
+    <main className="p-8 flex flex-col gap-8">
+      {/* <h1 className="text-4xl font-bold text-center">Convex + Next.js + WorkOS</h1> */}
+      <Authenticated>
+        <Content />
+      </Authenticated>
+      <Unauthenticated>
+        <SignInForm />
+      </Unauthenticated>
+    </main>
   );
 }
 
@@ -815,22 +797,5 @@ function TranscriptionModal({
         </DialogDescription>
       </DialogContent>
     </Dialog>
-  );
-}
-
-function UserMenu({ user, onSignOut }: { user: User; onSignOut: () => void }) {
-  return (
-    <div className="flex items-center gap-2">
-      <Link href="/events" className="text-sm underline hover:no-underline">
-        Events
-      </Link>
-      <Link href="/settings" className="text-sm underline hover:no-underline">
-        Settings
-      </Link>
-      <span className="text-sm">{user.email}</span>
-      <button onClick={onSignOut} className="bg-red-500 text-white px-3 py-1 rounded-md text-sm hover:bg-red-600">
-        Sign out
-      </button>
-    </div>
   );
 }
