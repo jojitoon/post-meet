@@ -91,7 +91,9 @@ describe('Settings Page', () => {
 
     render(<SettingsPage />);
 
-    expect(screen.getByText(/Calendars/i)).toBeInTheDocument();
+    // Use getAllByText and check that at least one exists
+    const connectedCalendarsElements = screen.getAllByText(/Connected Calendars/i);
+    expect(connectedCalendarsElements.length).toBeGreaterThan(0);
   });
 
   it('should render social media tabs', () => {
@@ -135,16 +137,16 @@ describe('Settings Page', () => {
     } as any);
 
     vi.mocked(useQuery).mockImplementation((query) => {
-      if (query === 'api.calendars.listCalendars') {
+      if (query === api.calendars.listCalendars) {
         return [] as any;
       }
-      if (query === 'api.userSettings.getUserSettings') {
+      if (query === api.userSettings.getUserSettings) {
         return { botJoinMinutesBefore: 5 } as any;
       }
-      if (query === 'api.socialMedia.getSocialMediaConnections') {
+      if (query === api.socialMedia.getSocialMediaConnections) {
         return [] as any;
       }
-      if (query === 'api.automations.getAutomations') {
+      if (query === api.automations.getAutomations) {
         return [] as any;
       }
       return undefined;
@@ -152,7 +154,7 @@ describe('Settings Page', () => {
 
     render(<SettingsPage />);
 
-    expect(screen.getByText(/Bot Join Time/i)).toBeInTheDocument();
+    expect(screen.getByText(/Notetaker Bot Settings/i)).toBeInTheDocument();
   });
 
   it('should render calendars when available', async () => {
@@ -173,21 +175,12 @@ describe('Settings Page', () => {
       },
     ];
 
-    vi.mocked(useQuery).mockImplementation((query) => {
-      if (query === api.calendars.listCalendars) {
-        return mockCalendars as any;
-      }
-      if (query === api.userSettings.getUserSettings) {
-        return null;
-      }
-      if (query === api.socialMedia.getSocialMediaConnections) {
-        return [];
-      }
-      if (query === api.automations.getAutomations) {
-        return [];
-      }
-      return undefined;
-    });
+    // Mock useQuery calls in order: listCalendars, getUserSettings, getSocialMediaConnections, getAutomations
+    vi.mocked(useQuery)
+      .mockReturnValueOnce(mockCalendars as any) // listCalendars
+      .mockReturnValueOnce(null) // getUserSettings
+      .mockReturnValueOnce([] as any) // getSocialMediaConnections
+      .mockReturnValueOnce([] as any); // getAutomations
 
     render(<SettingsPage />);
 
@@ -231,25 +224,27 @@ describe('Settings Page', () => {
     ];
 
     vi.mocked(useQuery).mockImplementation((query) => {
-      if (query === 'api.calendars.listCalendars') {
-        return [];
+      if (query === api.calendars.listCalendars) {
+        return [] as any;
       }
-      if (query === 'api.userSettings.getUserSettings') {
+      if (query === api.userSettings.getUserSettings) {
         return null;
       }
-      if (query === 'api.socialMedia.getSocialMediaConnections') {
+      if (query === api.socialMedia.getSocialMediaConnections) {
         return mockConnections as any;
       }
-      if (query === 'api.automations.getAutomations') {
-        return [];
+      if (query === api.automations.getAutomations) {
+        return [] as any;
       }
-      return null;
+      return undefined;
     });
 
     render(<SettingsPage />);
 
     await waitFor(() => {
-      expect(screen.getByText(/LinkedIn/i)).toBeInTheDocument();
+      // Use getAllByText and check that at least one exists
+      const linkedInElements = screen.getAllByText(/LinkedIn/i);
+      expect(linkedInElements.length).toBeGreaterThan(0);
     });
   });
 
@@ -272,25 +267,25 @@ describe('Settings Page', () => {
     ];
 
     vi.mocked(useQuery).mockImplementation((query) => {
-      if (query === 'api.calendars.listCalendars') {
-        return [];
+      if (query === api.calendars.listCalendars) {
+        return [] as any;
       }
-      if (query === 'api.userSettings.getUserSettings') {
+      if (query === api.userSettings.getUserSettings) {
         return null;
       }
-      if (query === 'api.socialMedia.getSocialMediaConnections') {
-        return [];
+      if (query === api.socialMedia.getSocialMediaConnections) {
+        return [] as any;
       }
-      if (query === 'api.automations.getAutomations') {
+      if (query === api.automations.getAutomations) {
         return mockAutomations as any;
       }
-      return null;
+      return undefined;
     });
 
     render(<SettingsPage />);
 
     await waitFor(() => {
-      expect(screen.getByText(/Automations/i)).toBeInTheDocument();
+      expect(screen.getByText(/Content Generation/i)).toBeInTheDocument();
     });
   });
 

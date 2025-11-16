@@ -52,11 +52,12 @@ describe('Meeting Detail Page', () => {
       signOut: vi.fn(),
     } as any);
 
-    vi.mocked(useQuery).mockReturnValue(undefined);
+    vi.mocked(useQuery).mockImplementation(() => undefined);
 
     render(<MeetingDetailPage />);
 
-    expect(screen.getByTestId('authenticated')).toBeInTheDocument();
+    // Should show loading state
+    expect(screen.getByText(/Loading meeting details/i)).toBeInTheDocument();
   });
 
   it('should render meeting details when event is loaded', async () => {
@@ -80,23 +81,16 @@ describe('Meeting Detail Page', () => {
       userId: 'user_123',
       calendarId: 'cal_1',
       status: 'confirmed',
+      calendarName: 'Test Calendar',
+      calendarEmail: 'test@example.com',
     };
 
-    vi.mocked(useQuery).mockImplementation((query) => {
-      if (query === api.eventsQueries.getEventByIdPublic) {
-        return mockEvent as any;
-      }
-      if (query === api.contentGenerationQueries.getFollowUpEmail) {
-        return null;
-      }
-      if (query === api.contentGenerationQueries.getGeneratedPosts) {
-        return [];
-      }
-      if (query === api.automations.getAutomations) {
-        return [];
-      }
-      return undefined;
-    });
+    // Mock useQuery calls in order: getEventByIdPublic, getFollowUpEmail, getGeneratedPosts, getAutomations
+    vi.mocked(useQuery)
+      .mockReturnValueOnce(mockEvent as any) // getEventByIdPublic
+      .mockReturnValueOnce(null) // getFollowUpEmail
+      .mockReturnValueOnce([] as any) // getGeneratedPosts
+      .mockReturnValueOnce([] as any); // getAutomations
 
     render(<MeetingDetailPage />);
 
@@ -126,23 +120,16 @@ describe('Meeting Detail Page', () => {
       userId: 'user_123',
       calendarId: 'cal_1',
       status: 'confirmed',
+      calendarName: 'Test Calendar',
+      calendarEmail: 'test@example.com',
     };
 
-    vi.mocked(useQuery).mockImplementation((query) => {
-      if (query === api.eventsQueries.getEventByIdPublic) {
-        return mockEvent as any;
-      }
-      if (query === api.contentGenerationQueries.getFollowUpEmail) {
-        return null;
-      }
-      if (query === api.contentGenerationQueries.getGeneratedPosts) {
-        return [];
-      }
-      if (query === api.automations.getAutomations) {
-        return [];
-      }
-      return undefined;
-    });
+    // Mock useQuery calls in order: getEventByIdPublic, getFollowUpEmail, getGeneratedPosts, getAutomations
+    vi.mocked(useQuery)
+      .mockReturnValueOnce(mockEvent as any) // getEventByIdPublic
+      .mockReturnValueOnce(null) // getFollowUpEmail
+      .mockReturnValueOnce([] as any) // getGeneratedPosts
+      .mockReturnValueOnce([] as any); // getAutomations
 
     render(<MeetingDetailPage />);
 
@@ -178,18 +165,12 @@ describe('Meeting Detail Page', () => {
       createdAt: Date.now(),
     };
 
-    vi.mocked(useQuery).mockImplementation((query) => {
-      if (query === 'api.eventsQueries.getEventByIdPublic') {
-        return mockEvent as any;
-      }
-      if (query === 'api.contentGenerationQueries.getFollowUpEmail') {
-        return mockEmail as any;
-      }
-      if (query === 'api.contentGenerationQueries.getGeneratedPosts') {
-        return [];
-      }
-      return null;
-    });
+    // Mock useQuery calls in order: getEventByIdPublic, getFollowUpEmail, getGeneratedPosts, getAutomations
+    vi.mocked(useQuery)
+      .mockReturnValueOnce(mockEvent as any) // getEventByIdPublic
+      .mockReturnValueOnce(mockEmail as any) // getFollowUpEmail
+      .mockReturnValueOnce([] as any) // getGeneratedPosts
+      .mockReturnValueOnce([] as any); // getAutomations
 
     render(<MeetingDetailPage />);
 
@@ -227,23 +208,17 @@ describe('Meeting Detail Page', () => {
       },
     ];
 
-    vi.mocked(useQuery).mockImplementation((query) => {
-      if (query === 'api.eventsQueries.getEventByIdPublic') {
-        return mockEvent as any;
-      }
-      if (query === 'api.contentGenerationQueries.getFollowUpEmail') {
-        return null;
-      }
-      if (query === 'api.contentGenerationQueries.getGeneratedPosts') {
-        return mockPosts as any;
-      }
-      return null;
-    });
+    // Mock useQuery calls in order: getEventByIdPublic, getFollowUpEmail, getGeneratedPosts, getAutomations
+    vi.mocked(useQuery)
+      .mockReturnValueOnce(mockEvent as any) // getEventByIdPublic
+      .mockReturnValueOnce(null) // getFollowUpEmail
+      .mockReturnValueOnce(mockPosts as any) // getGeneratedPosts
+      .mockReturnValueOnce([] as any); // getAutomations
 
     render(<MeetingDetailPage />);
 
     await waitFor(() => {
-      expect(screen.getByText(/Generated Posts/i)).toBeInTheDocument();
+      expect(screen.getByText(/Social Media Posts/i)).toBeInTheDocument();
     });
   });
 
@@ -256,27 +231,19 @@ describe('Meeting Detail Page', () => {
       signOut: vi.fn(),
     } as any);
 
-    vi.mocked(useQuery).mockImplementation((query) => {
-      if (query === api.eventsQueries.getEventByIdPublic) {
-        return null;
-      }
-      if (query === api.contentGenerationQueries.getFollowUpEmail) {
-        return null;
-      }
-      if (query === api.contentGenerationQueries.getGeneratedPosts) {
-        return [];
-      }
-      if (query === api.automations.getAutomations) {
-        return [];
-      }
-      return undefined;
-    });
+    // Mock useQuery calls in order: getEventByIdPublic, getFollowUpEmail, getGeneratedPosts, getAutomations
+    // When event is not found, getEventByIdPublic returns null
+    vi.mocked(useQuery)
+      .mockReturnValueOnce(null) // getEventByIdPublic - event not found
+      .mockReturnValueOnce(null) // getFollowUpEmail
+      .mockReturnValueOnce([] as any) // getGeneratedPosts
+      .mockReturnValueOnce([] as any); // getAutomations
 
     render(<MeetingDetailPage />);
 
     await waitFor(() => {
-      // Should still render the page structure
-      expect(screen.getByTestId('authenticated')).toBeInTheDocument();
+      // Should show meeting not found message
+      expect(screen.getByText(/Meeting not found/i)).toBeInTheDocument();
     });
   });
 
@@ -301,21 +268,12 @@ describe('Meeting Detail Page', () => {
       notetakerRequested: false,
     };
 
-    vi.mocked(useQuery).mockImplementation((query) => {
-      if (query === api.eventsQueries.getEventByIdPublic) {
-        return mockEvent as any;
-      }
-      if (query === api.contentGenerationQueries.getFollowUpEmail) {
-        return null;
-      }
-      if (query === api.contentGenerationQueries.getGeneratedPosts) {
-        return [];
-      }
-      if (query === api.automations.getAutomations) {
-        return [];
-      }
-      return undefined;
-    });
+    // Mock useQuery calls in order: getEventByIdPublic, getFollowUpEmail, getGeneratedPosts, getAutomations
+    vi.mocked(useQuery)
+      .mockReturnValueOnce(mockEvent as any) // getEventByIdPublic
+      .mockReturnValueOnce(null) // getFollowUpEmail
+      .mockReturnValueOnce([] as any) // getGeneratedPosts
+      .mockReturnValueOnce([] as any); // getAutomations
 
     render(<MeetingDetailPage />);
 
@@ -348,21 +306,12 @@ describe('Meeting Detail Page', () => {
       status: 'confirmed',
     };
 
-    vi.mocked(useQuery).mockImplementation((query) => {
-      if (query === api.eventsQueries.getEventByIdPublic) {
-        return mockEvent as any;
-      }
-      if (query === api.contentGenerationQueries.getFollowUpEmail) {
-        return null;
-      }
-      if (query === api.contentGenerationQueries.getGeneratedPosts) {
-        return [];
-      }
-      if (query === api.automations.getAutomations) {
-        return [];
-      }
-      return undefined;
-    });
+    // Mock useQuery calls in order: getEventByIdPublic, getFollowUpEmail, getGeneratedPosts, getAutomations
+    vi.mocked(useQuery)
+      .mockReturnValueOnce(mockEvent as any) // getEventByIdPublic
+      .mockReturnValueOnce(null) // getFollowUpEmail
+      .mockReturnValueOnce([] as any) // getGeneratedPosts
+      .mockReturnValueOnce([] as any); // getAutomations
 
     render(<MeetingDetailPage />);
 
@@ -393,21 +342,12 @@ describe('Meeting Detail Page', () => {
       status: 'confirmed',
     };
 
-    vi.mocked(useQuery).mockImplementation((query) => {
-      if (query === api.eventsQueries.getEventByIdPublic) {
-        return mockEvent as any;
-      }
-      if (query === api.contentGenerationQueries.getFollowUpEmail) {
-        return null;
-      }
-      if (query === api.contentGenerationQueries.getGeneratedPosts) {
-        return [];
-      }
-      if (query === api.automations.getAutomations) {
-        return [];
-      }
-      return undefined;
-    });
+    // Mock useQuery calls in order: getEventByIdPublic, getFollowUpEmail, getGeneratedPosts, getAutomations
+    vi.mocked(useQuery)
+      .mockReturnValueOnce(mockEvent as any) // getEventByIdPublic
+      .mockReturnValueOnce(null) // getFollowUpEmail
+      .mockReturnValueOnce([] as any) // getGeneratedPosts
+      .mockReturnValueOnce([] as any); // getAutomations
 
     render(<MeetingDetailPage />);
 

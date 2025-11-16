@@ -7,6 +7,10 @@ import { useAuth } from '@workos-inc/authkit-nextjs/components';
 // Mock WorkOS AuthKit
 vi.mock('@workos-inc/authkit-nextjs/components', () => ({
   useAuth: vi.fn(),
+}));
+
+// Mock Convex React
+vi.mock('convex/react', () => ({
   Authenticated: ({ children }: { children: React.ReactNode }) => <div data-testid="authenticated">{children}</div>,
   Unauthenticated: ({ children }: { children: React.ReactNode }) => <div data-testid="unauthenticated">{children}</div>,
 }));
@@ -62,7 +66,9 @@ describe('Navbar Component', () => {
 
     expect(screen.getByText('Home')).toBeInTheDocument();
     expect(screen.getByText('Events')).toBeInTheDocument();
-    expect(screen.getByTestId('authenticated')).toBeInTheDocument();
+    // There are multiple Authenticated components (NavLinks and UserMenu)
+    const authenticatedElements = screen.getAllByTestId('authenticated');
+    expect(authenticatedElements.length).toBeGreaterThan(0);
   });
 
   it('should render user avatar when authenticated', () => {
@@ -79,9 +85,10 @@ describe('Navbar Component', () => {
 
     render(<Navbar />);
 
-    // Avatar button should be present
-    const avatarButtons = screen.getAllByRole('button');
-    const avatarButton = avatarButtons.find((btn) => btn.querySelector('img') || btn.textContent === '');
+    // Avatar button should be present - look for button with aria-haspopup="menu"
+    const buttons = screen.getAllByRole('button');
+    const avatarButton = buttons.find((btn) => btn.getAttribute('aria-haspopup') === 'menu');
+    expect(avatarButton).toBeDefined();
     expect(avatarButton).toBeInTheDocument();
   });
 
@@ -101,8 +108,11 @@ describe('Navbar Component', () => {
 
     render(<Navbar />);
 
-    const avatarButton = screen.getByRole('button');
-    await user.click(avatarButton);
+    // Find the avatar button by aria-haspopup attribute
+    const buttons = screen.getAllByRole('button');
+    const avatarButton = buttons.find((btn) => btn.getAttribute('aria-haspopup') === 'menu');
+    expect(avatarButton).toBeDefined();
+    await user.click(avatarButton!);
 
     await waitFor(() => {
       expect(screen.getByText('Test User')).toBeInTheDocument();
@@ -128,8 +138,11 @@ describe('Navbar Component', () => {
 
     render(<Navbar />);
 
-    const avatarButton = screen.getByRole('button');
-    await user.click(avatarButton);
+    // Find the avatar button by aria-haspopup attribute
+    const buttons = screen.getAllByRole('button');
+    const avatarButton = buttons.find((btn) => btn.getAttribute('aria-haspopup') === 'menu');
+    expect(avatarButton).toBeDefined();
+    await user.click(avatarButton!);
 
     await waitFor(() => {
       expect(screen.getByText('Log out')).toBeInTheDocument();
@@ -172,9 +185,11 @@ describe('Navbar Component', () => {
 
     render(<Navbar />);
 
-    // Avatar should render with initials fallback
-    const avatar = screen.getByRole('button');
-    expect(avatar).toBeInTheDocument();
+    // Avatar should render with initials fallback - look for button with aria-haspopup="menu"
+    const buttons = screen.getAllByRole('button');
+    const avatarButton = buttons.find((btn) => btn.getAttribute('aria-haspopup') === 'menu');
+    expect(avatarButton).toBeDefined();
+    expect(avatarButton).toBeInTheDocument();
   });
 
   it('should display email initial when no name is available', () => {
@@ -188,8 +203,11 @@ describe('Navbar Component', () => {
 
     render(<Navbar />);
 
-    const avatar = screen.getByRole('button');
-    expect(avatar).toBeInTheDocument();
+    // Look for the avatar button (dropdown trigger) - it has aria-haspopup="menu"
+    const buttons = screen.getAllByRole('button');
+    const avatarButton = buttons.find((btn) => btn.getAttribute('aria-haspopup') === 'menu');
+    expect(avatarButton).toBeDefined();
+    expect(avatarButton).toBeInTheDocument();
   });
 });
 

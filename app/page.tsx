@@ -146,7 +146,7 @@ function Content() {
           </div>
         </CardHeader>
         <CardContent>
-          {upcomingEvents === undefined ? (
+          {upcomingEvents === undefined || upcomingEvents === null ? (
             <div className="text-center py-8 text-muted-foreground">Loading...</div>
           ) : upcomingEvents.length === 0 ? (
             <div className="text-center py-8 text-muted-foreground">
@@ -187,7 +187,7 @@ function Content() {
           <CardTitle>Past Events (Today)</CardTitle>
         </CardHeader>
         <CardContent>
-          {pastEvents === undefined ? (
+          {pastEvents === undefined || pastEvents === null ? (
             <div className="text-center py-8 text-muted-foreground">Loading...</div>
           ) : pastEvents.length === 0 ? (
             <div className="text-center py-8 text-muted-foreground">No past events for today</div>

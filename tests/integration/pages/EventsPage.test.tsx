@@ -126,18 +126,15 @@ describe('Events Page', () => {
         calendarId: 'cal_1',
         userId: 'user_123',
         status: 'confirmed',
+        calendarName: 'Test Calendar',
+        calendarEmail: 'test@example.com',
       },
     ];
 
-    vi.mocked(useQuery).mockImplementation((query) => {
-      if (query === api.eventsQueries.listEvents) {
-        return mockEvents as any;
-      }
-      if (query === api.calendars.listCalendars) {
-        return [{ _id: 'cal_1', calendarName: 'Test Calendar' }] as any;
-      }
-      return undefined;
-    });
+    // Mock useQuery calls in order: listEvents, listCalendars
+    vi.mocked(useQuery)
+      .mockReturnValueOnce(mockEvents as any) // listEvents
+      .mockReturnValueOnce([{ _id: 'cal_1', calendarName: 'Test Calendar' }] as any); // listCalendars
 
     render(<EventsPage />);
 
@@ -192,18 +189,15 @@ describe('Events Page', () => {
         meetingLink: 'https://zoom.us/j/123',
         location: 'Virtual',
         attendees: ['user1@example.com', 'user2@example.com'],
+        calendarName: 'Test Calendar',
+        calendarEmail: 'test@example.com',
       },
     ];
 
-    vi.mocked(useQuery).mockImplementation((query) => {
-      if (query === api.eventsQueries.listEvents) {
-        return mockEvents as any;
-      }
-      if (query === api.calendars.listCalendars) {
-        return [{ _id: 'cal_1', calendarName: 'Test Calendar' }] as any;
-      }
-      return undefined;
-    });
+    // Mock useQuery calls in order: listEvents, listCalendars
+    vi.mocked(useQuery)
+      .mockReturnValueOnce(mockEvents as any) // listEvents
+      .mockReturnValueOnce([{ _id: 'cal_1', calendarName: 'Test Calendar' }] as any); // listCalendars
 
     render(<EventsPage />);
 

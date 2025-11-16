@@ -98,21 +98,16 @@ describe('Home Page', () => {
         title: 'Upcoming Meeting',
         startTime: new Date(Date.now() + 86400000).toISOString(),
         endTime: new Date(Date.now() + 9000000).toISOString(),
+        calendarName: 'Test Calendar',
+        calendarEmail: 'test@example.com',
       },
     ];
 
-    vi.mocked(useQuery).mockImplementation((query) => {
-      if (query === api.eventsQueries.getUpcomingEvents) {
-        return mockUpcomingEvents as any;
-      }
-      if (query === api.eventsQueries.getPastEvents) {
-        return [] as any;
-      }
-      if (query === api.calendars.listCalendars) {
-        return [] as any;
-      }
-      return undefined;
-    });
+    // Mock useQuery calls in order: getUpcomingEvents, getPastEvents, listCalendars
+    vi.mocked(useQuery)
+      .mockReturnValueOnce(mockUpcomingEvents as any) // getUpcomingEvents
+      .mockReturnValueOnce([] as any) // getPastEvents
+      .mockReturnValueOnce([] as any); // listCalendars
 
     render(<Home />);
 
@@ -136,21 +131,16 @@ describe('Home Page', () => {
         title: 'Past Meeting',
         startTime: new Date(Date.now() - 86400000).toISOString(),
         endTime: new Date(Date.now() - 82800000).toISOString(),
+        calendarName: 'Test Calendar',
+        calendarEmail: 'test@example.com',
       },
     ];
 
-    vi.mocked(useQuery).mockImplementation((query) => {
-      if (query === 'api.eventsQueries.getUpcomingEvents') {
-        return [] as any;
-      }
-      if (query === 'api.eventsQueries.getPastEvents') {
-        return mockPastEvents as any;
-      }
-      if (query === 'api.calendars.listCalendars') {
-        return [] as any;
-      }
-      return null;
-    });
+    // Mock useQuery calls in order: getUpcomingEvents, getPastEvents, listCalendars
+    vi.mocked(useQuery)
+      .mockReturnValueOnce([] as any) // getUpcomingEvents
+      .mockReturnValueOnce(mockPastEvents as any) // getPastEvents
+      .mockReturnValueOnce([] as any); // listCalendars
 
     render(<Home />);
 
@@ -203,4 +193,5 @@ describe('Home Page', () => {
     expect(screen.getByTestId('authenticated')).toBeInTheDocument();
   });
 });
+
 
