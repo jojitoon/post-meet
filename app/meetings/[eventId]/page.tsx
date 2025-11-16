@@ -81,8 +81,8 @@ export default function MeetingDetailPage() {
 
     setIsGeneratingEmail(true);
     try {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       await generateEmail({
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         eventId: eventId as any,
         transcription: event.meetingBaasTranscription,
       });
@@ -103,8 +103,8 @@ export default function MeetingDetailPage() {
 
     setIsGeneratingPost((prev) => ({ ...prev, [automationId]: true }));
     try {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       await generatePost({
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         eventId: eventId as any,
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         automationId: automationId as any,
@@ -128,14 +128,14 @@ export default function MeetingDetailPage() {
     setIsPosting((prev) => ({ ...prev, [post._id]: true }));
     try {
       if (post.platform === 'linkedin') {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         await postToLinkedIn({
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
           postId: post._id as any,
           content: post.content,
         });
       } else if (post.platform === 'facebook') {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         await postToFacebook({
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
           postId: post._id as any,
           content: post.content,
         });
@@ -158,8 +158,8 @@ export default function MeetingDetailPage() {
 
     setIsSendingBot(true);
     try {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       await sendBotToMeeting({
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         eventId: eventId as any,
       });
       toast.success('Bot will join the meeting at the scheduled time!');
@@ -174,8 +174,8 @@ export default function MeetingDetailPage() {
   const handleRecallBot = async () => {
     setIsRecallingBot(true);
     try {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       await recallBot({
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         eventId: eventId as any,
       });
       toast.success('Transcription retrieval initiated. It may take a few moments to process.');
@@ -192,8 +192,8 @@ export default function MeetingDetailPage() {
     setNotetakerRequested(checked);
 
     try {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       await toggleNotetakerRequest({
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         eventId: eventId as any,
         notetakerRequested: checked,
       });
