@@ -317,16 +317,18 @@ function Content() {
                 const isCurrentlyHappening = eventStart <= now && eventEnd && eventEnd > now;
 
                 return (
-                  <EventCard
-                    key={event._id}
-                    event={event}
-                    onToggleNotetaker={handleToggleNotetaker}
-                    isCurrentlyHappening={isCurrentlyHappening}
-                    onClick={() => {
-                      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                      setSelectedEvent(event as any);
-                    }}
-                  />
+                  <Link key={event._id} href={`/meetings/${event._id}`} className="block">
+                    <EventCard
+                      key={event._id}
+                      event={event}
+                      onToggleNotetaker={handleToggleNotetaker}
+                      isCurrentlyHappening={isCurrentlyHappening}
+                      onClick={() => {
+                        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                        // setSelectedEvent(event as any);
+                      }}
+                    />
+                  </Link>
                 );
               })}
             </div>

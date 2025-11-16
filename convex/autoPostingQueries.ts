@@ -6,9 +6,7 @@ export const getEventsNeedingAutoProcessing = internalQuery({
   args: {
     currentTime: v.string(),
   },
-  handler: async (ctx, args) => {
-    const now = new Date(args.currentTime);
-
+  handler: async (ctx) => {
     // Get all events
     const allEvents = await ctx.db.query('events').collect();
 
@@ -19,8 +17,6 @@ export const getEventsNeedingAutoProcessing = internalQuery({
     const eventsNeedingProcessing = [];
 
     for (const event of allEvents) {
-      const eventEnd = new Date(event.endTime);
-      if (eventEnd > now) continue; // Event hasn't ended yet
       if (!event.meetingBaasTranscription) continue; // No transcription
 
       // Check if follow-up email exists
@@ -59,4 +55,3 @@ export const getEventsNeedingAutoProcessing = internalQuery({
     return eventsNeedingProcessing;
   },
 });
-
